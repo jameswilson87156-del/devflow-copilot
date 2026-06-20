@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://mysql:3306/devflow_copilot?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:devflow}
+    password: ${DB_PASSWORD:devflow}
+  h2:
+    console:
+      enabled: false
+
+devflow:
+  ai:
+    provider: ${DEVFLOW_AI_PROVIDER:local-rule}
