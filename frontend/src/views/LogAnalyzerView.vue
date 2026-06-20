@@ -168,8 +168,8 @@ onMounted(loadPageData)
     <section class="panel input-panel">
       <div class="log-toolbar">
         <div>
-          <h3 class="panel-title">Log Analyzer</h3>
-          <p class="panel-subtitle">Java / Spring Boot stack trace workspace</p>
+          <h3 class="panel-title">日志分析工作台</h3>
+          <p class="panel-subtitle">Java / Spring Boot 异常诊断、根因定位与修复 Prompt</p>
         </div>
         <div class="toolbar-controls">
           <el-select v-model="selectedProjectId" placeholder="选择项目" class="project-select">
@@ -208,11 +208,11 @@ onMounted(loadPageData)
         />
         <div class="log-table" aria-label="parsed log rows">
           <div class="log-table-head">
-            <span>Time</span>
-            <span>Level</span>
-            <span>Source</span>
-            <span>Message</span>
-            <span>Cost</span>
+            <span>时间</span>
+            <span>级别</span>
+            <span>来源</span>
+            <span>日志消息</span>
+            <span>耗时</span>
           </div>
           <div class="log-table-body">
             <div v-for="row in logRows" :key="row.id" class="log-row" :class="row.level.toLowerCase()">
@@ -225,8 +225,8 @@ onMounted(loadPageData)
           </div>
         </div>
         <div class="input-actions">
-          <CopyButton :text="form.rawLog" label="Copy Log" />
-          <el-button type="primary" :icon="Search" :loading="loading" @click="runAnalyze">Analyze Log</el-button>
+          <CopyButton :text="form.rawLog" label="复制日志" />
+          <el-button type="primary" :icon="Search" :loading="loading" @click="runAnalyze">分析日志</el-button>
         </div>
       </div>
     </section>
@@ -234,37 +234,37 @@ onMounted(loadPageData)
     <section class="panel diagnosis-panel">
       <div class="panel-header">
         <div>
-          <h3 class="panel-title">Diagnosis Result</h3>
-          <p class="panel-subtitle">Exception type · root cause · fix prompt</p>
+          <h3 class="panel-title">诊断结果</h3>
+          <p class="panel-subtitle">异常类型 · 根因分析 · 建议修复步骤 · 修复 Prompt</p>
         </div>
       </div>
       <div v-if="result" class="diagnosis-body">
         <div class="diagnosis-summary">
           <div>
-            <span>Exception Type</span>
+            <span>异常类型</span>
             <strong>{{ result.exceptionType }}</strong>
           </div>
           <div>
-            <span>Risk Level</span>
+            <span>严重级别</span>
             <strong>{{ result.riskLevel }}</strong>
           </div>
         </div>
         <article class="diagnosis-section">
-          <h4>可能原因</h4>
+          <h4>根因判断</h4>
           <p>{{ result.possibleReason }}</p>
         </article>
         <article class="diagnosis-section">
-          <h4>排查步骤</h4>
+          <h4>建议修复步骤</h4>
           <pre>{{ result.diagnoseSteps }}</pre>
         </article>
         <article class="diagnosis-section">
-          <h4>风险提示</h4>
+          <h4>影响范围与风险提示</h4>
           <p><el-icon><Warning /></el-icon>{{ result.riskTips }}</p>
         </article>
         <article class="diagnosis-section">
           <div class="section-title">
-            <h4>Codex / Claude Fix Prompt</h4>
-            <CopyButton :text="result.fixPrompt" label="Copy Prompt" />
+            <h4>修复 Prompt</h4>
+            <CopyButton :text="result.fixPrompt" label="复制 Prompt" />
           </div>
           <pre class="prompt-box">{{ result.fixPrompt }}</pre>
         </article>
@@ -272,7 +272,7 @@ onMounted(loadPageData)
       <div v-else class="empty-state">
         <div>
           <p>等待日志诊断</p>
-          <span>选择示例或粘贴真实日志，然后点击 Analyze Log。</span>
+          <span>选择示例或粘贴真实日志，然后点击“分析日志”。</span>
         </div>
       </div>
     </section>
@@ -280,8 +280,8 @@ onMounted(loadPageData)
     <aside class="panel side-panel">
       <div class="panel-header">
         <div>
-          <h3 class="panel-title">Analysis History</h3>
-          <p class="panel-subtitle">Recent log diagnosis</p>
+          <h3 class="panel-title">诊断历史</h3>
+          <p class="panel-subtitle">最近 Java / Spring Boot 日志分析</p>
         </div>
       </div>
       <div class="history-list">
@@ -292,7 +292,7 @@ onMounted(loadPageData)
             <span>{{ item.riskLevel }} · {{ item.createdAt }}</span>
           </div>
           <el-button :icon="CopyDocument" size="small" text @click="copyFixPrompt(item.fixPrompt)">
-            Prompt
+            复制
           </el-button>
         </article>
       </div>
@@ -303,7 +303,7 @@ onMounted(loadPageData)
 <style scoped>
 .log-page {
   display: grid;
-  grid-template-columns: minmax(520px, 1.2fr) minmax(420px, 0.95fr) 300px;
+  grid-template-columns: minmax(460px, 1.08fr) minmax(380px, 0.92fr) minmax(220px, 260px);
   gap: var(--space-3);
   min-height: calc(100vh - 126px);
   min-width: 0;

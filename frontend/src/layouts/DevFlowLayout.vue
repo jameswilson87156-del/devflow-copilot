@@ -19,14 +19,14 @@ const currentTitle = computed(() => {
         <div class="brand-mark" aria-hidden="true"><span>DF</span></div>
         <div class="brand-copy">
           <strong>DevFlow</strong>
-          <span>AI Coding Console</span>
+          <span>AI 编码总控台</span>
         </div>
       </div>
 
       <div class="workspace-label">
-        <span class="mono">WORKSPACE</span>
+        <span class="mono">工作空间</span>
         <strong>DevFlow Copilot</strong>
-        <small>LOCAL / MVP</small>
+        <small>本地规则引擎 / MVP</small>
       </div>
 
       <nav class="nav-stack">
@@ -64,7 +64,7 @@ const currentTitle = computed(() => {
           </span>
           <span class="system-chip accent">
             <el-icon><DataLine /></el-icon>
-            MVP 模式
+            人工 Review
           </span>
         </div>
       </header>

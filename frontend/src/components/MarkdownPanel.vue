@@ -22,10 +22,10 @@ async function copyContent() {
   <section class="panel markdown-panel">
     <div class="panel-header">
       <div>
-        <h3 class="panel-title">{{ title || 'AI Output' }}</h3>
-        <p class="panel-subtitle">Markdown Artifact / Human Review</p>
+        <h3 class="panel-title">{{ title || 'AI 输出' }}</h3>
+        <p class="panel-subtitle">Markdown Artifact · 人工 Review</p>
       </div>
-      <el-button :icon="DocumentCopy" size="small" @click="copyContent">{{ copyLabel || 'Copy Result' }}</el-button>
+      <el-button :icon="DocumentCopy" size="small" @click="copyContent">{{ copyLabel || '复制结果' }}</el-button>
     </div>
     <div class="panel-body">
       <div v-if="content" class="markdown-body output" v-html="html"></div>

@@ -31,7 +31,7 @@ const form = reactive<{ type: string; input: string; extraContext: string; templ
 
 const generationTypes = [
   { label: '需求拆解', value: 'requirement-split' },
-  { label: '代码修改计划', value: 'code-plan' },
+  { label: '代码变更计划', value: 'code-plan' },
   { label: 'README 内容', value: 'readme-generate' },
   { label: 'Commit Message', value: 'commit-message' },
   { label: '修复 Prompt', value: 'fix-prompt' },
@@ -43,6 +43,12 @@ const selectedTemplate = computed(() => prompts.value.find((item) => item.id ===
 const displayStatus = computed(() => (loading.value ? 'GENERATING' : result.value?.status || 'DRAFT'))
 const canSave = computed(() => result.value?.status === 'READY_FOR_REVIEW')
 const canConfirm = computed(() => result.value?.status === 'SAVED')
+const currentTrace = computed(() => [
+  { label: 'Context', value: selectedProject.value?.projectName || '未选择项目' },
+  { label: 'Prompt', value: selectedTemplate.value ? `${selectedTemplate.value.templateName} v${selectedTemplate.value.version}` : '默认模板' },
+  { label: 'Provider', value: result.value?.providerName || 'local-rule' },
+  { label: 'Review', value: statusText(displayStatus.value) },
+])
 
 const taskSteps = computed(() => {
   const status = displayStatus.value
@@ -130,6 +136,18 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '操作失败，请稍后重试'
 }
 
+function statusText(status: string) {
+  const map: Record<string, string> = {
+    DRAFT: '草稿',
+    GENERATING: '正在生成',
+    READY_FOR_REVIEW: '待人工确认',
+    SAVED: '已保存',
+    CONFIRMED: '已确认',
+    FAILED: '生成失败',
+  }
+  return map[status] || status
+}
+
 onMounted(loadPageData)
 </script>
 
@@ -151,7 +169,7 @@ onMounted(loadPageData)
           <span class="file-dot" aria-hidden="true"></span>
           <div>
             <strong>{{ selectedProject.projectName }}</strong>
-            <span>数据库持久化 · 人工确认</span>
+            <span>Spring Boot 3 · Vue 3 · 人工确认</span>
           </div>
         </div>
 
@@ -165,7 +183,7 @@ onMounted(loadPageData)
           <h4>最近 Artifact</h4>
           <article v-for="record in recentRecords" :key="record.id">
             <strong>{{ record.inputSummary }}</strong>
-            <span class="mono">{{ record.providerName || 'local-rule' }} · {{ record.status }}</span>
+            <span class="mono">{{ record.providerName || 'local-rule' }} · {{ statusText(record.status) }}</span>
           </article>
         </div>
       </div>
@@ -174,13 +192,13 @@ onMounted(loadPageData)
     <section class="composer-column panel">
       <div class="workbench-toolbar">
         <div>
-          <h3 class="panel-title">任务编排器</h3>
+          <h3 class="panel-title">Workflow 编排器</h3>
           <p class="panel-subtitle">模板渲染 → Provider 生成 → 人工确认</p>
         </div>
         <div class="toolbar-actions">
           <StatusTag :status="displayStatus" />
-          <el-button :icon="RefreshRight" @click="form.input = ''">清空草稿</el-button>
-          <el-button type="primary" :icon="MagicStick" :loading="loading" @click="runGenerate">运行 Workflow</el-button>
+          <el-button :icon="RefreshRight" @click="form.input = ''">清空输入</el-button>
+          <el-button type="primary" :icon="MagicStick" :loading="loading" @click="runGenerate">运行工作流</el-button>
         </div>
       </div>
 
@@ -199,9 +217,9 @@ onMounted(loadPageData)
         </div>
 
         <div class="config-grid">
-          <label><span>生成类型</span><el-select v-model="form.type" class="full"><el-option v-for="item in generationTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></label>
+          <label><span>任务类型</span><el-select v-model="form.type" class="full"><el-option v-for="item in generationTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></label>
           <label><span>Prompt 模板</span><el-select v-model="form.templateId" class="full" placeholder="使用默认模板"><el-option v-for="item in availableTemplates" :key="item.id" :label="`${item.templateName} · v${item.version}${item.isDefault ? ' · 默认' : ''}`" :value="item.id" /></el-select></label>
-          <label><span>补充 Context</span><el-input v-model="form.extraContext" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="相关文件、接口边界、验收标准、限制条件。" /></label>
+          <label><span>补充上下文</span><el-input v-model="form.extraContext" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="相关文件、接口边界、验收标准、限制条件。" /></label>
         </div>
 
         <p v-if="selectedTemplate" class="template-hint">
@@ -224,6 +242,7 @@ onMounted(loadPageData)
       </button>
       <div v-if="!aiPanelCollapsed" class="result-content">
         <div class="artifact-meta panel">
+          <div><span>Trace ID</span><strong>{{ result?.recordId ? `#${result.recordId}` : '待生成' }}</strong></div>
           <div><span>状态</span><StatusTag :status="displayStatus" /></div>
           <div><span>Provider</span><strong>{{ result?.providerName || 'local-rule' }}</strong></div>
           <div><span>模型</span><strong>{{ result?.modelName || 'local-rule-mvp' }}</strong></div>
@@ -231,12 +250,25 @@ onMounted(loadPageData)
           <div><span>Token</span><strong>{{ result?.totalTokens ?? '—' }}</strong></div>
           <div><span>模板</span><strong>{{ result?.promptTemplateName ? `${result.promptTemplateName} v${result.promptTemplateVersion}` : '—' }}</strong></div>
         </div>
+        <div class="trace-card panel">
+          <header>
+            <strong>运行 Trace</strong>
+            <span class="mono">{{ displayStatus }}</span>
+          </header>
+          <div class="trace-grid">
+            <div v-for="item in currentTrace" :key="item.label">
+              <span class="mono">{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+        </div>
         <MarkdownPanel :content="result?.outputContent || ''" title="生成 Artifact" copy-label="复制结果" />
         <div class="review-bar panel">
-          <div><strong>Human-in-the-loop</strong><span>先保存生成记录，再完成人工确认。</span></div>
+          <div><strong>人工 Review 状态机</strong><span>先保存生成记录，再标记已确认，避免 Artifact 直接进入交付。</span></div>
           <div class="review-actions">
+            <el-button :icon="RefreshRight" :disabled="loading" @click="runGenerate">重新生成</el-button>
             <el-button :icon="DocumentCopy" :disabled="!canSave" @click="saveCurrent">保存记录</el-button>
-            <el-button type="success" :icon="CircleCheck" :disabled="!canConfirm" @click="confirmCurrent">人工确认</el-button>
+            <el-button type="success" :icon="CircleCheck" :disabled="!canConfirm" @click="confirmCurrent">标记已确认</el-button>
           </div>
         </div>
       </div>
@@ -247,7 +279,7 @@ onMounted(loadPageData)
 <style scoped>
 .workbench { display: grid; grid-template-columns: minmax(220px, 260px) minmax(360px, 1fr) minmax(330px, 390px); gap: 12px; min-width: 0; align-items: start; }
 .workbench.ai-collapsed { grid-template-columns: minmax(220px, 280px) minmax(420px, 1fr) 40px; }
-.workbench > *, .panel-header > *, .workbench-toolbar > *, .toolbar-actions > *, .config-grid label > *, .task-flow > *, .result-column > *, .review-bar > * { min-width: 0; }
+.workbench > *, .panel-header > *, .workbench-toolbar > *, .toolbar-actions > *, .config-grid label > *, .task-flow > *, .result-column > *, .review-bar > *, .trace-card > * { min-width: 0; }
 .context-body, .composer-body { display: grid; gap: 12px; }
 .full { width: 100%; }
 .context-head { display: flex; align-items: center; gap: 9px; padding: 10px; border: var(--border-default); border-left: 2px solid var(--color-accent); border-radius: 4px; background: var(--color-active-row); }
@@ -276,6 +308,7 @@ onMounted(loadPageData)
 .step-dot { width: 16px; height: 16px; display: grid; place-items: center; border: var(--border-default); border-radius: 2px; }.task-step.active .step-dot { border-color: var(--color-accent); background: var(--color-accent-muted); }.failed-label { color: var(--color-error); font-size: 10px; }
 .result-column { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 8px; min-width: 0; }.ai-collapsed .result-column { grid-template-columns: 40px; }.collapse-rail { width: 32px; min-height: 280px; border: var(--border-default); border-radius: 4px; background: var(--color-surface); color: var(--muted); cursor: pointer; }.collapse-rail:hover { color: var(--text); border-color: var(--color-accent); }
 .result-content { min-width: 0; display: grid; gap: 8px; align-content: start; }.artifact-meta { padding: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--color-border-subtle); }.artifact-meta div { min-width: 0; padding: 8px; background: var(--color-bg); }.artifact-meta span, .artifact-meta strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.artifact-meta span { color: var(--muted); font-size: 9px; }.artifact-meta strong { margin-top: 4px; font-size: 10px; }
+.trace-card { padding: 10px; display: grid; gap: 9px; }.trace-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }.trace-card header strong { font-size: 12px; }.trace-card header span { color: var(--color-text-disabled); font-size: 9px; }.trace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--color-border-subtle); }.trace-grid div { min-width: 0; padding: 8px; background: var(--color-bg); }.trace-grid span, .trace-grid strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.trace-grid span { color: var(--color-text-disabled); font-size: 9px; }.trace-grid strong { margin-top: 4px; font-size: 10px; }
 .review-bar { padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }.review-bar strong, .review-bar span { display: block; }.review-bar span { margin-top: 3px; color: var(--muted); font-size: 9px; }
 @media (max-width: 1100px) { .workbench, .workbench.ai-collapsed { grid-template-columns: 1fr; }.result-column { grid-template-columns: 1fr; }.collapse-rail { display: none; }.result-content { display: grid; } }
 </style>

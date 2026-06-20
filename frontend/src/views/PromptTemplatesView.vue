@@ -41,6 +41,13 @@ const filteredPrompts = computed(() => prompts.value.filter((item) => {
       || (item.variables || '').toLowerCase().includes(keyword))
 }))
 
+const promptSummary = computed(() => [
+  { label: '模板总数', value: prompts.value.length },
+  { label: '启用模板', value: prompts.value.filter((item) => item.enabled).length },
+  { label: '默认模板', value: prompts.value.filter((item) => item.isDefault).length },
+  { label: '当前筛选', value: filteredPrompts.value.length },
+])
+
 const highlightedTemplate = computed(() => escapeHtml(form.templateContent)
   .replace(/\{\{([^}]+)\}\}/g, '<mark>{{$1}}</mark>'))
 
@@ -117,11 +124,17 @@ onMounted(() => loadPrompts())
   <div class="templates-page" v-loading="loading">
     <section class="template-list-panel panel">
       <div class="panel-header">
-        <div><h3 class="panel-title">Prompt 模板</h3><p class="panel-subtitle">启用模板会真正参与 Workbench 生成</p></div>
+        <div><h3 class="panel-title">Prompt 模板库</h3><p class="panel-subtitle">可复用 Prompt 编排，启用模板会参与 AI 工作台生成</p></div>
         <el-button type="primary" :icon="Plus" @click="openCreate">新建模板</el-button>
       </div>
 
       <div class="template-filters">
+        <div class="template-summary" aria-label="Prompt 模板统计">
+          <div v-for="item in promptSummary" :key="item.label">
+            <strong class="mono">{{ item.value }}</strong>
+            <span>{{ item.label }}</span>
+          </div>
+        </div>
         <el-input v-model="searchKeyword" placeholder="搜索名称、变量或 Key" />
         <div class="filter-chips">
           <button v-for="item in templateTypes" :key="item.value" :class="{ active: filterType === item.value }" @click="filterType = item.value">{{ item.label }}</button>
@@ -150,7 +163,7 @@ onMounted(() => loadPrompts())
       <div class="panel-header">
         <div>
           <h3 class="panel-title">{{ editingId ? '模板编辑器' : '新建 Prompt 模板' }}</h3>
-          <p class="panel-subtitle">保存现有模板会递增版本，生成历史保留当时版本</p>
+          <p class="panel-subtitle">保存模板会递增版本，生成历史保留当时渲染内容</p>
         </div>
         <div class="editor-actions">
           <el-dropdown @command="insertVariable">
@@ -185,6 +198,7 @@ onMounted(() => loadPrompts())
 .templates-page { display: grid; grid-template-columns: minmax(360px, 5fr) minmax(0, 7fr); gap: 12px; min-width: 0; align-items: start; }
 .templates-page > *, .panel-header > *, .template-row > *, .editor-form label > *, .variables-preview > * { min-width: 0; }
 .template-filters { padding: 10px; display: grid; gap: 8px; border-bottom: var(--border-subtle); }
+.template-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border: var(--border-subtle); border-radius: 4px; background: var(--color-border-subtle); overflow: hidden; }.template-summary div { min-width: 0; padding: 8px; background: var(--color-bg); }.template-summary strong, .template-summary span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.template-summary strong { color: var(--color-accent); font-size: 14px; }.template-summary span { margin-top: 4px; color: var(--muted); font-size: 9px; }
 .filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }.filter-chips button { height: 25px; padding: 0 7px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--muted); cursor: pointer; font-size: 10px; }.filter-chips button.active, .filter-chips button:hover { border-color: var(--color-border); background: var(--color-active-row); color: var(--text); }
 .template-list { display: grid; }.template-row { width: 100%; min-height: 72px; display: grid; grid-template-columns: 8px minmax(0, 1fr) 96px; align-items: center; gap: 9px; padding: 9px 10px; border: 0; border-bottom: var(--border-subtle); background: transparent; color: inherit; cursor: pointer; text-align: left; }.template-row:last-child { border-bottom: 0; }.template-row:hover, .template-row.active { background: var(--color-active-row); }.template-row.active { box-shadow: inset 2px 0 var(--color-accent); }
 .template-state { width: 7px; height: 7px; border: 1px solid var(--color-text-ghost); border-radius: 2px; }.template-state.enabled { border-color: var(--color-accent); background: var(--color-accent); }

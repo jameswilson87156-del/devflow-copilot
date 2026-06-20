@@ -29,6 +29,11 @@ const generationTypes = [
 
 const projectOptions = computed(() => [{ id: undefined, projectName: '全部项目' }, ...projects.value])
 const projectNameMap = computed(() => new Map(projects.value.map((project) => [project.id, project.projectName])))
+const statusSummary = computed(() => [
+  { label: '待确认', value: records.value.filter((record) => record.status === 'READY_FOR_REVIEW').length },
+  { label: '已保存', value: records.value.filter((record) => record.status === 'SAVED').length },
+  { label: '已确认', value: records.value.filter((record) => record.confirmed || record.status === 'CONFIRMED').length },
+])
 
 async function loadRecords() {
   loading.value = true
@@ -92,13 +97,20 @@ onMounted(loadPageData)
   <div class="history-page" v-loading="loading">
     <section class="history-list-panel panel">
       <div class="panel-header">
-        <div><h3 class="panel-title">生成历史</h3><p class="panel-subtitle">追踪 Provider、Prompt 模板与人工确认状态</p></div>
-        <span class="record-count mono">{{ records.length }} RECORDS</span>
+        <div><h3 class="panel-title">生成历史审计</h3><p class="panel-subtitle">Artifact、Provider、Prompt 模板与人工确认状态</p></div>
+        <span class="record-count mono">{{ records.length }} 条记录</span>
       </div>
 
       <div class="filters">
         <el-select v-model="selectedProjectId" placeholder="项目" @change="loadRecords"><el-option v-for="project in projectOptions" :key="project.id ?? 'all'" :label="project.projectName" :value="project.id" /></el-select>
         <el-select v-model="selectedType" placeholder="类型" @change="loadRecords"><el-option v-for="type in generationTypes" :key="type.value" :label="type.label" :value="type.value" /></el-select>
+      </div>
+
+      <div class="status-summary" aria-label="生成状态统计">
+        <div v-for="item in statusSummary" :key="item.label">
+          <strong class="mono">{{ item.value }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
       </div>
 
       <div class="history-list">
@@ -159,6 +171,7 @@ onMounted(loadPageData)
 .history-page { display: grid; grid-template-columns: minmax(350px, 390px) minmax(0, 1fr); gap: 12px; min-width: 0; align-items: start; }
 .history-page > *, .panel-header > *, .history-row > *, .detail-actions > *, .telemetry > *, .detail-workspace > * { min-width: 0; }
 .record-count { color: var(--color-text-disabled); font-size: 9px; }.filters { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-bottom: var(--border-subtle); }
+.status-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; padding: 1px; border-bottom: var(--border-subtle); background: var(--color-border-subtle); }.status-summary div { min-width: 0; padding: 8px; background: var(--color-surface); }.status-summary strong, .status-summary span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }.status-summary strong { color: var(--color-accent); font-size: 14px; }.status-summary span { margin-top: 4px; color: var(--muted); font-size: 9px; }
 .history-list { display: grid; }.history-row { width: 100%; min-height: 68px; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 10px; border: 0; border-bottom: var(--border-subtle); background: transparent; color: inherit; cursor: pointer; text-align: left; }.history-row:last-child { border-bottom: 0; }.history-row:hover, .history-row.active { background: var(--color-active-row); }.history-row.active { box-shadow: inset 2px 0 var(--color-accent); }
 .trace-node { width: 7px; height: 7px; border: 1px solid var(--color-text-ghost); border-radius: 2px; }.trace-node.ready_for_review { border-color: var(--color-warning); background: var(--color-warning); }.trace-node.saved { border-color: var(--color-info); background: var(--color-info); }.trace-node.confirmed { border-color: var(--color-accent); background: var(--color-accent); }.trace-node.failed { border-color: var(--color-error); background: var(--color-error); }.trace-node.generating { border-color: var(--color-accent); animation: pulse 1.5s infinite; }
 .record-main strong, .record-main span, .record-main small, .record-side small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.record-main strong { font-size: 11px; }.record-main span { margin-top: 3px; color: var(--muted); font-size: 9px; }.record-main small { margin-top: 5px; color: var(--color-text-disabled); font-size: 8px; }.record-side { display: grid; justify-items: end; gap: 5px; }.record-side small { max-width: 108px; color: var(--color-text-disabled); font-size: 8px; }
