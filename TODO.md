@@ -48,6 +48,7 @@
 | token 精确统计 | `LocalRuleGenerationProvider.estimateTokens()` = `text.length() / 3.5`，是字符数估算，不是真实 tokenizer |
 | SSE 流式输出 | 当前是同步请求，无 SSE |
 | Docker Compose 部署成功 | `docker compose up --build` 因 Docker Hub 镜像拉取网络超时未完成，后端/前端容器未创建；不能写成"已容器化部署" |
+| InMemoryStore 是默认生产持久化 | `InMemoryStore` 仅用于 `memory-demo` 或无数据库轻量演示场景，不是默认 dev/test/prod 主流程持久化方案；默认主流程应使用 MyBatis-Plus + H2/MySQL |
 
 ---
 
@@ -99,17 +100,26 @@
 
 ## P1 — 建议优化（提升工程质量和面试表现）
 
-### P1-1：InMemoryStore demo-only 说明
+### P1-1：InMemoryStore demo-only 说明 ✅ 已完成
+
+- 状态：**done**
+- 完成提交：`9babb4f docs: clarify InMemoryStore demo profile boundary`
+- 完成内容：仅修改 `InMemoryStore.java` 类头 Javadoc，明确它只用于 `memory-demo` profile 或无数据库轻量演示场景。
+- 持久化边界：`InMemoryStore` 不是默认 dev/test/prod 主流程持久化方案；默认主流程应使用 MyBatis-Plus + H2/MySQL。
+- 未做内容：没有修改任何业务逻辑；没有修改字段、方法、注解或 profile 配置；没有再次扩展内存存储能力。
+- 验证说明：未运行 `mvn test`，原因是本次只修改 Javadoc 注释，不改变运行行为。
+- 验收：类头 Javadoc 清晰，阅读代码不再产生“内存存储是默认生产持久化”的歧义。
+
+### P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”
 
 - 状态：**待处理**
-- 背景：`InMemoryStore.java` 在 `service/impl` 包下，虽有 `@Profile("memory-demo")` 保护，但面试官翻代码会困惑"这还在用吗"
-- 涉及文件：`backend/src/main/java/com/devflow/copilot/service/impl/InMemoryStore.java`
-- 方案：在类头添加 Javadoc，说明"演示/备份用途，memory-demo profile 专用，主存储为 MyBatis-Plus + H2/MySQL"
-- 不可破坏：`@Profile("memory-demo")` 不得删除；`mvn test` 仍通过
-- 验收：类头 Javadoc 清晰，阅读代码无歧义
-- 建议 commit message：`docs: annotate InMemoryStore as memory-demo only`
+- 背景：P0 与 P1-1 已收口后，需要确认 README 是否还需要一段更适合大三 Java 后端实习简历的项目介绍。
+- 涉及文件：只读审查 `README.md`，下一轮先不直接修改 README。
+- 审查重点：判断项目是否可以更稳地表达为 Java 后端工程化 + AI 工具链项目。
+- 不可夸大：不能写成生产级大模型平台；不能把 `local-rule` 写成真实 LLM；不能把日志规则引擎写成 AI 推理。
+- 验收：输出只读审查结论；如果确实需要修改 README，应作为后续单独任务处理。
 
-### P1-2：README 补充 local-rule 和 token 估算说明 ✅ 已完成
+### 已完成：README 补充 local-rule 和 token 估算说明（原 P1-2）
 
 - 状态：**done**
 - 背景：README 描述了 token 记录和 local-rule 模式，但未说明 token 是估算值、local-rule 生成内容是模板 boilerplate
@@ -153,11 +163,13 @@
 
 ## 下一轮建议任务
 
-**进行一次 P0 收口只读总审查。**
+**P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”。**
 
-检查 `README.md`、`HANDOFF.md`、`TODO.md`、后端测试结果和最近提交历史是否一致，确认项目是否可以进入 P1 阶段。
+下一轮先只读审查，不直接修改 README。
 
-如果直接进入 P1，也只选择一个 P1 任务，不要同时做多个任务。
+审查重点是判断是否可以把项目更稳地表达为 Java 后端工程化 + AI 工具链项目。
+
+边界要求：不能夸大为生产级大模型平台；不能把 `local-rule` 写成真实 LLM；不能把日志规则引擎写成 AI 推理。
 
 ---
 
