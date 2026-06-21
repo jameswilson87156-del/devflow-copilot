@@ -24,7 +24,8 @@
 - **Generation Provider 抽象**：`LocalRuleGenerationProvider`（无 Key 演示）+ `OpenAiCompatibleGenerationProvider`（真实 HTTP 调用 `/v1/chat/completions`）+ `GenerationProviderRouter`（含 fallback 逻辑）
 - **日志诊断规则引擎**：识别8种 Java/Spring Boot 常见异常关键词，输出排查步骤和修复 Prompt（规则引擎，不是 LLM 推理）
 - **DTO 校验 + GlobalExceptionHandler**，统一 `ApiResponse` 响应结构
-- **15 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 15, Failures: 0, Errors: 0, Skipped: 0`
+- **18 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`
+- **ai_task 最小只读查询入口**：`GET /api/tasks?projectId={projectId}`，复用 `AiTaskMapper`，按 ID 倒序返回指定项目任务列表
 - **Vue 3 + TypeScript + Element Plus** 前端，WorkbenchView 三栏布局，状态机按钮联动，`npm run build` 通过
 - **截图**：`docs/images/` 下5张标准截图 + 5张1920px 大图均存在
 - **Docker Compose** 配置存在，`docker compose config` 通过（三服务：mysql / backend / frontend）
@@ -50,26 +51,49 @@
 
 ---
 
-## P0 — 必须处理（影响协作流程或简历可信度）
+## P0 — 必须处理（当前已闭环）
 
 ### P0-1：创建 TODO.md ✅ 本轮完成
 
 - 状态：**done**（本文件即为 P0-1 的产出）
 - 完成时间：2026-06-21
 
-### P0-2：处理 ai_task 表 / Mapper 空壳
+### P0-2：处理 ai_task 表 / Mapper 空壳 ✅ 本轮完成
 
-- 状态：**待处理**
-- 背景：`V1__create_core_schema.sql` 中存在 `ai_task` 表，`AiTaskMapper.java` 存在，但无对应 `AiTaskService` / `AiTaskController`。面试官翻代码或 SQL 会直接追问。
-- 涉及文件：`AiTaskMapper.java`；方案A 还需新建 `AiTaskService.java`、`AiTaskController.java`
-- 二选一方案：
-  - **方案 A（推荐）**：添加最简 `GET /api/tasks?projectId=` 接口，返回空列表
-  - **方案 B**：在 `AiTaskMapper.java` 类头 Javadoc 注释标注"为后续扩展预留，当前无业务实现"
-- 不可破坏：现有15个测试须全部通过
-- 验收方式：
-  - [ ] 方案A：`GET /api/tasks?projectId=1` 返回 HTTP 200 空列表；`mvn test` 仍15个通过
-  - [ ] 方案B：`AiTaskMapper.java` 有明确 Javadoc 注释；面试时有完整答案
-- 建议 commit message：`feat: add minimal ai_task list endpoint` 或 `docs: annotate AiTaskMapper as extension placeholder`
+- 状态：**done**
+- 完成提交：`bce0368 feat: add ai task query endpoint`
+- 完成内容：
+  - 新增 `GET /api/tasks?projectId={projectId}`
+  - 新增 `AiTaskController`
+  - 新增 `AiTaskService`
+  - 新增 `AiTaskServiceImpl`
+  - 复用 `AiTaskMapper`
+  - 增加 `ControllerAndMapperIntegrationTest` 覆盖
+- 接口行为：
+  - `projectId` 必填
+  - 缺失 `projectId` 返回 HTTP 400，统一错误结构 `code=4000`
+  - 返回 `ApiResponse<List<AiTask>>`
+  - 按 `id` 倒序返回指定项目的 `ai_task` 列表
+  - 不存在项目或无任务时返回空数组
+- 未做内容：
+  - 没有新增、更新、删除接口
+  - 没有任务调度
+  - 没有异步执行
+  - 没有接入真实 LLM
+  - 没有改生成、日志分析、模板管理、历史记录主流程
+  - 没有改 `InMemoryStore`
+- 验证结果：`mvn test` 通过，`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`
+
+#### P0-2 只读复核结论
+
+- P0-2 已解决。
+- 实现符合 Controller -> Service -> Mapper 分层风格。
+- 返回结构沿用 `ApiResponse<List<AiTask>>`。
+- 参数校验与现有 `GlobalExceptionHandler` 风格一致。
+- 测试覆盖正常查询、空结果、缺失 `projectId` 三类场景。
+- 未发现高风险。
+- 低风险：当前排序使用 `orderByDesc(AiTask::getId)`，与部分历史查询使用 createdAt 倒序略有风格差异，但功能正确，可解释为 ID 自增近似创建顺序。
+- 低风险：测试中 `projectId=2L` 依赖 seed 数据，当前与项目测试惯例一致。
 
 ---
 
@@ -85,15 +109,15 @@
 - 验收：类头 Javadoc 清晰，阅读代码无歧义
 - 建议 commit message：`docs: annotate InMemoryStore as memory-demo only`
 
-### P1-2：README 补充 local-rule 和 token 估算说明
+### P1-2：README 补充 local-rule 和 token 估算说明 ✅ 已完成
 
-- 状态：**待处理**
+- 状态：**done**
 - 背景：README 描述了 token 记录和 local-rule 模式，但未说明 token 是估算值、local-rule 生成内容是模板 boilerplate
 - 涉及文件：`README.md`（仅相关段落）
 - 方案：在 LLM Provider 配置或核心功能段落补充两句话：① local-rule token 为字符数估算；② local-rule 生成结构化模板内容，非 LLM 推理
 - 不可破坏：README 整体结构和简历描述部分不变
 - 验收：描述与实现一致；不引入任何虚构功能
-- 建议 commit message：`docs: clarify local-rule behavior and token estimation in README`
+- 完成提交：`5908a7b docs: clarify resume README boundaries`
 
 ### P1-3：HANDOFF.md 持续记录 Claude 审查和 Codex 修复结果
 
@@ -129,9 +153,11 @@
 
 ## 下一轮建议任务
 
-**优先处理 P0-2：处理 ai_task 空壳问题。**
+**进行一次 P0 收口只读总审查。**
 
-不要同时做多个任务。P0-2 完成后再处理 P1-1。
+检查 `README.md`、`HANDOFF.md`、`TODO.md`、后端测试结果和最近提交历史是否一致，确认项目是否可以进入 P1 阶段。
+
+如果直接进入 P1，也只选择一个 P1 任务，不要同时做多个任务。
 
 ---
 

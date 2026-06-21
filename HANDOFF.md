@@ -12,10 +12,12 @@
 
 - 当前工作分支：`resume-optimization-v1`。
 - 最新已完成提交：
+  - `bce0368 feat: add ai task query endpoint`
   - `5908a7b docs: clarify resume README boundaries`
   - `d5a4486 docs: add project TODO roadmap`
   - `e38126c chore: avoid Docker compose port conflict`
 - P0-1 已完成：根目录 `TODO.md` 已创建，AGENTS.md 启动流程中的 TODO 读取闭环已补齐。
+- P0-2 已完成：`ai_task` 已补最小只读查询入口 `GET /api/tasks?projectId={projectId}`，不再只是表 / Entity / Mapper 空壳。
 - 后续每轮任务应先读 `AGENTS.md`、`HANDOFF.md`、`TODO.md`，每轮只做一个明确任务，校验通过后再 commit。
 - README.md 已完成边界澄清：不再把 Docker Compose runtime 写成完整部署成功；不再笼统写 `API smoke test passed`；已压实 `local-rule` 是本地规则/模板生成，不是真实 LLM 推理；已压实日志分析是关键词规则引擎，不是 AI 自动推理；已压实 local-rule tokenUsage 是文本长度估算，不是真实 tokenizer。
 - 项目仍适合作为大三 Java 后端实习简历项目基础，亮点应聚焦 Spring Boot 分层架构、MyBatis-Plus 持久化、Prompt 模板管理、生成记录状态流转、规则化日志诊断、Vue 3 控制台前端、后端测试和前端构建。
@@ -30,21 +32,34 @@
 - `docker compose up --build` 已尝试，但失败原因是 Docker Hub `registry-1.docker.io` 镜像元数据请求 `i/o timeout`。
 - 已执行 `docker compose down`，不带 `-v`；不应写成 Docker Compose runtime 已完整部署成功。
 
+### P0-2 只读复核结论
+
+- P0-2 已解决。
+- 实现符合 Controller -> Service -> Mapper 分层风格。
+- 返回结构沿用 `ApiResponse<List<AiTask>>`。
+- 参数校验与现有 `GlobalExceptionHandler` 风格一致：缺失 `projectId` 返回 HTTP 400，错误结构 `code=4000`。
+- 测试覆盖正常查询、空结果、缺失 `projectId` 三类场景。
+- 后端验证已通过：`mvn test`，`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`。
+- 未发现高风险。
+- 低风险：当前排序使用 `orderByDesc(AiTask::getId)`，与部分历史查询使用 `createdAt` 倒序略有风格差异，但功能正确，可解释为 ID 自增近似创建顺序。
+- 低风险：测试中 `projectId=2L` 依赖 seed 数据，当前与项目测试惯例一致。
+
 ### 下一轮建议任务
 
 > 一次只处理一个任务。
 
-**只处理 P0-2：ai_task 空壳问题。**
+**进行一次 P0 收口只读总审查。**
 
-- 方案 A：补最小 `GET /api/tasks?projectId=` 接口，让 `ai_task` 表 / 实体 / Mapper 有可演示入口。
-- 方案 B：如果暂时不做功能，则在 `AiTaskMapper.java` 或相关文档中明确 `ai_task` 是扩展预留，避免 README / 面试表述误导。
-- 本轮不要顺手处理 `InMemoryStore`、README、Docker 或其他 P1/P2 项。
+- 检查 `README.md`、`HANDOFF.md`、`TODO.md`、后端测试结果和最近提交历史是否一致。
+- 确认 P0-1 和 P0-2 均已闭环，项目是否可以进入 P1 阶段。
+- 如果直接进入 P1，也只选择一个 P1 任务，不要同时做多个任务。
 
 ## Codex 修复结果
 
 - `d5a4486 docs: add project TODO roadmap`：已创建根目录 `TODO.md`，P0-1 完成。
 - `5908a7b docs: clarify resume README boundaries`：已修正 README 简历表述和验收状态边界。
-- 剩余 P0：`ai_task` 表 / 实体 / Mapper 仍无 Service / Controller 或明确扩展预留说明。
+- `bce0368 feat: add ai task query endpoint`：已新增 `GET /api/tasks?projectId={projectId}`、`AiTaskController`、`AiTaskService`、`AiTaskServiceImpl`，复用 `AiTaskMapper`，并补充 `ControllerAndMapperIntegrationTest` 覆盖；`mvn test` 通过，18 tests。
+- 剩余 P0：当前无已知未闭环 P0；建议下一轮做 P0 收口只读总审查。
 - 本次 HANDOFF 同步为纯文档状态更新，不代表业务代码变更。
 
 ## 历史记录
@@ -56,6 +71,16 @@
 - 验证证据：
 - 遗留问题：
 - 下一步：
+
+---
+
+### 2026-06-21 — Codex — P0-2 ai_task 最小查询入口完成复核
+
+- 做了什么：记录提交 `bce0368 feat: add ai task query endpoint`，同步 P0-2 已完成，并补充只读复核结论。
+- 修改文件：`HANDOFF.md`、`TODO.md`
+- 验证证据：代码提交中已运行 `mvn test`，结果为 `Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`。
+- 遗留问题：`ai_task` 仅为最小只读查询入口，不是完整任务系统；无新增/更新/删除、调度、异步执行或 LLM 接入。
+- 下一步：建议进行 P0 收口只读总审查，确认 README/HANDOFF/TODO/测试结果/提交历史一致后再进入 P1。
 
 ---
 
@@ -119,14 +144,13 @@
 - AGENTS.md 启动流程闭环：后续每轮任务应先读 `AGENTS.md`、`HANDOFF.md`、`TODO.md`。
 - 当前不再把 TODO 缺失列为 P0；剩余 P0 为 `ai_task` 空壳问题。
 
-**P0-2：ai_task 表和 Mapper 无对应 Service / Controller**
+**P0-2：ai_task 表和 Mapper 无对应 Service / Controller（已完成）**
 
-- 文件/位置：`db/migration/V1__create_core_schema.sql`（有 ai_task 表定义）、`AiTaskMapper.java`（存在）、无 AiTaskService、无 AiTaskController
-- 证据：Glob 搜索到 `AiTaskMapper.java`，全量 Java 文件列表中未见 AiTaskService 或 AiTaskController
-- 影响：面试官翻 V1 SQL 或 mapper 目录会直接问"这个 Mapper 是干嘛的"，当前无法给出完整答案
-- 严重程度：中
-- 建议：二选一 —— (A) 添加最简 `GET /api/tasks?projectId=` 接口，返回空列表；(B) 在 AiTaskMapper 类头注释标注"为后续扩展预留，当前无业务实现"，并在 README 中同步说明
-- 验收：面试官问起有完整的答案；若选方案A，`GET /api/tasks?projectId=1` 返回 HTTP 200
+- 状态：已完成，提交 `bce0368 feat: add ai task query endpoint`。
+- 完成内容：新增 `GET /api/tasks?projectId={projectId}`，新增 `AiTaskController`、`AiTaskService`、`AiTaskServiceImpl`，复用 `AiTaskMapper`。
+- 行为边界：`projectId` 必填；缺失返回 HTTP 400 和统一错误结构 `code=4000`；返回 `ApiResponse<List<AiTask>>`；按 ID 倒序返回指定项目任务；不存在项目或无任务时返回空数组。
+- 未做内容：没有新增、更新、删除接口；没有任务调度；没有异步执行；没有接入真实 LLM；没有改生成、日志分析、模板管理、历史记录主流程；没有改 `InMemoryStore`。
+- 验证：`ControllerAndMapperIntegrationTest` 已覆盖正常查询、空结果、缺失 `projectId`；`mvn test` 通过，`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`。
 
 ---
 
@@ -203,17 +227,18 @@
   - [x] 文件内容列出"已完成"与"待处理"两个分区，内容与项目实际现状一致
   - [x] AGENTS.md 描述的"启动前读取 TODO.md"流程可正常执行
 
-**任务2：处理 ai_task 空壳问题**
+**任务2：处理 ai_task 空壳问题（已完成）**
 
 - 目标：选择方案A或B —— A: 添加最简 `GET /api/tasks?projectId=` 返回空列表；B: 在 AiTaskMapper 头部 Javadoc 注释中说明"为后续扩展预留，当前无业务实现"
+- 完成提交：`bce0368 feat: add ai task query endpoint`
 - 涉及文件：方案A 涉及 `AiTaskMapper.java`、新建 `AiTaskService.java`、`AiTaskController.java`；方案B 仅涉及 `AiTaskMapper.java`
 - 不能破坏：现有15个测试须全部通过，`mvn test` 结果不能回归
 - 不在本轮处理：ai_task 的完整 CRUD
 - 验收方式：
-  - [ ] 选择了明确的方案（A 或 B）并实施
-  - [ ] 若选方案A：`GET /api/tasks?projectId=1` 返回 HTTP 200 和空列表；`mvn test` 仍15个通过
-  - [ ] 若选方案B：AiTaskMapper.java 有 Javadoc 注释说明其用途
-  - [ ] 面试时对"这个 Mapper 是干嘛的"有完整答案
+  - [x] 选择了明确的方案（A）并实施
+  - [x] `GET /api/tasks?projectId=1` 返回 HTTP 200 和列表；未知项目返回 HTTP 200 空列表
+  - [x] `mvn test` 通过，18 tests
+  - [x] 面试时对"这个 Mapper 是干嘛的"有完整答案：它支撑最小只读任务查询入口，不是完整任务系统
 
 **任务3：补充 README 中 token 估算和 local-rule 说明（已完成）**
 
@@ -243,7 +268,8 @@
 #### Codex 修复结果（已同步）
 
 - P0-1 / 任务1：已完成，提交 `d5a4486 docs: add project TODO roadmap`。
+- P0-2 / 任务2：已完成，提交 `bce0368 feat: add ai task query endpoint`。
 - README 边界澄清 / 任务3：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
 - Docker Compose 端口避让：已完成配置修改，提交 `e38126c chore: avoid Docker compose port conflict`；runtime `up --build` 未完整成功，原因是 Docker Hub 镜像元数据请求 `i/o timeout`。
-- 当前剩余优先任务：P0-2 `ai_task` 空壳问题。
+- 当前剩余优先任务：P0 收口只读总审查；确认一致后再进入 P1。
 - 本条同步仅更新交接信息，不代表本轮修改业务代码。
