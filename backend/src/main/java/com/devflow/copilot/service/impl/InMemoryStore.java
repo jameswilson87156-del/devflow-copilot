@@ -16,6 +16,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Demo-only in-memory backing store for the {@code memory-demo} profile.
+ *
+ * <p>This component is kept only for no-database or lightweight local demo scenarios. It is not
+ * the default dev/test/prod persistence path, and it must not be described in resumes or README
+ * material as production-grade storage. The default application flow should use the
+ * MyBatis-Plus/database persistence implementation backed by H2 or MySQL.</p>
+ *
+ * <p>This note documents the profile boundary only; it intentionally does not change runtime
+ * behavior, {@link Profile} configuration, fields, or methods.</p>
+ */
 @Component
 @Profile("memory-demo")
 public class InMemoryStore {
