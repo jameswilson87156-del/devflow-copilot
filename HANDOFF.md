@@ -6,12 +6,13 @@
 
 ### 更新时间
 
-`2026-06-21（Asia/Shanghai）`
+`2026-06-22（Asia/Shanghai）`
 
 ### 当前真实状态
 
 - 当前工作分支：`resume-optimization-v1`。
 - 最新已完成提交：
+  - `0abd047 docs: add resume-oriented project summary`
   - `9babb4f docs: clarify InMemoryStore demo profile boundary`
   - `bce0368 feat: add ai task query endpoint`
   - `5908a7b docs: clarify resume README boundaries`
@@ -20,6 +21,7 @@
 - P0-1 已完成：根目录 `TODO.md` 已创建，AGENTS.md 启动流程中的 TODO 读取闭环已补齐。
 - P0-2 已完成：`ai_task` 已补最小只读查询入口 `GET /api/tasks?projectId={projectId}`，不再只是表 / Entity / Mapper 空壳。
 - P1-1 已完成：`InMemoryStore` 已补充 demo-only / `memory-demo` profile 边界 Javadoc；它仅用于 `memory-demo` 或无数据库轻量演示场景，不是默认 dev/test/prod 主流程持久化方案，默认主流程应使用 MyBatis-Plus + H2/MySQL。本次仅补注释，没有修改业务逻辑；未运行 `mvn test`，原因是只修改 Javadoc 注释，不改变运行行为。
+- P1-2 已完成：`README.md` 已在“项目定位”之后、“技术栈”之前新增“简历版项目介绍”小节；本次仅新增 4 句话的简历投递版项目介绍，没有重写 README，没有修改 Java / Vue 业务代码。
 - 后续每轮任务应先读 `AGENTS.md`、`HANDOFF.md`、`TODO.md`，每轮只做一个明确任务，校验通过后再 commit。
 - README.md 已完成边界澄清：不再把 Docker Compose runtime 写成完整部署成功；不再笼统写 `API smoke test passed`；已压实 `local-rule` 是本地规则/模板生成，不是真实 LLM 推理；已压实日志分析是关键词规则引擎，不是 AI 自动推理；已压实 local-rule tokenUsage 是文本长度估算，不是真实 tokenizer。
 - 项目仍适合作为大三 Java 后端实习简历项目基础，亮点应聚焦 Spring Boot 分层架构、MyBatis-Plus 持久化、Prompt 模板管理、生成记录状态流转、规则化日志诊断、Vue 3 控制台前端、后端测试和前端构建。
@@ -55,17 +57,26 @@
 - 修改范围：仅修改 `InMemoryStore.java` 类头 Javadoc，没有修改字段、方法、注解或任何业务逻辑。
 - 验证说明：未运行 `mvn test`，原因是本次只修改 Javadoc 注释，不改变运行行为。
 
+### P1-2 README 简历版项目介绍同步结论
+
+- P1-2 已完成：`README.md` 已新增“简历版项目介绍”小节。
+- 完成提交：`0abd047 docs: add resume-oriented project summary`。
+- 完成内容：只修改 `README.md`，在“项目定位”之后、“技术栈”之前新增 4 句话的简历投递版项目介绍。
+- 能力表达：突出 Java 后端工程化能力，包括 Spring Boot 3、REST API、Controller -> Service -> Mapper 分层、MyBatis-Plus、Flyway、H2/MySQL Profile、统一响应、状态流转和后端测试；也突出 Prompt 模板、生成记录、人工确认、local-rule 演示生成链路与 OpenAI-compatible Provider 代码层适配。
+- 边界表达：继续说明 `local-rule` 不是真实 LLM 推理，日志分析不是 AI 自动推理，tokenUsage 是估算，Docker runtime 未完整成功，`ai_task` 不是完整任务系统，`InMemoryStore` 不是默认主流程持久化。
+- 修改范围：仅新增短小节，没有重写 README；没有修改 Java / Vue 业务代码。
+
 ### 下一轮建议任务
 
 > 一次只处理一个任务。
 
-**P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”。**
+**P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史，判断 P1-1、P1-2 是否已闭环，并决定是否进入最终验收报告阶段。**
 
-- 下一轮先只读审查，不直接修改 README。
-- 审查重点：判断是否需要补一段更适合大三 Java 后端实习简历的项目介绍，让项目更稳地表达为 Java 后端工程化 + AI 工具链项目。
-- 不能夸大为生产级大模型平台。
-- 不能把 `local-rule` 写成真实 LLM。
-- 不能把日志规则引擎写成 AI 推理。
+- 下一轮先只读审查，不直接修改文件。
+- 审查重点：文档是否一致、是否还有夸大表述、是否适合进入最终验收。
+- 不要继续扩功能。
+- 不要运行 Docker。
+- 不要把 Docker runtime 写成完整部署成功。
 
 ## Codex 修复结果
 
@@ -73,7 +84,8 @@
 - `5908a7b docs: clarify resume README boundaries`：已修正 README 简历表述和验收状态边界。
 - `bce0368 feat: add ai task query endpoint`：已新增 `GET /api/tasks?projectId={projectId}`、`AiTaskController`、`AiTaskService`、`AiTaskServiceImpl`，复用 `AiTaskMapper`，并补充 `ControllerAndMapperIntegrationTest` 覆盖；`mvn test` 通过，18 tests。
 - `9babb4f docs: clarify InMemoryStore demo profile boundary`：已在 `InMemoryStore.java` 类头补充 demo-only / `memory-demo` profile 边界 Javadoc；仅用于无数据库或轻量演示场景，不是 dev/test/prod 默认持久化方案，默认主流程应使用 MyBatis-Plus + H2/MySQL；本次仅补注释，没有修改业务逻辑，未运行 `mvn test`。
-- 剩余 P0：当前无已知未闭环 P0；建议下一轮做 P1-2 README 简历亮点和面试口径只读审查。
+- `0abd047 docs: add resume-oriented project summary`：已在 `README.md` 的“项目定位”之后、“技术栈”之前新增“简历版项目介绍”小节；仅新增 4 句话，没有重写 README，没有修改业务代码；继续压住 `local-rule`、日志规则、tokenUsage、Docker runtime、`ai_task`、`InMemoryStore` 等边界。
+- 剩余 P0：当前无已知未闭环 P0；建议下一轮做 P1-3 只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史，判断是否进入最终验收报告阶段。
 - 本次 HANDOFF 同步为纯文档状态更新，不代表业务代码变更。
 
 ## 历史记录
@@ -85,6 +97,16 @@
 - 验证证据：
 - 遗留问题：
 - 下一步：
+
+---
+
+### 2026-06-22 — Codex — P1-2 README 简历版项目介绍完成同步
+
+- 做了什么：同步提交 `0abd047 docs: add resume-oriented project summary`，标记 P1-2 已完成；记录 README 已新增“简历版项目介绍”小节，并继续保持 local-rule、日志规则、tokenUsage、Docker runtime、ai_task、InMemoryStore 等边界。
+- 修改文件：`HANDOFF.md`、`TODO.md`
+- 验证证据：本轮为纯文档同步；已执行 `git diff -- HANDOFF.md TODO.md`、`git diff --check -- HANDOFF.md TODO.md`（退出码 0，仅 LF/CRLF 行尾提示）、`git status --short`（仅 `HANDOFF.md`、`TODO.md` 修改）。
+- 遗留问题：无新增阻塞；下一轮不扩功能、不运行 Docker，先只读审查文档与提交历史是否一致。
+- 下一步：P1-3 只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史，判断 P1-1、P1-2 是否已闭环，并决定是否进入最终验收报告阶段。
 
 ---
 
@@ -189,20 +211,28 @@
 - 验证说明：未运行 `mvn test`，原因是本次只修改 Javadoc 注释，不改变运行行为。
 - 验收：阅读代码不再产生“内存存储是默认生产持久化”的歧义。
 
-**P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”**
+**P1-2：README 简历版项目介绍（已完成）**
+
+- 状态：已完成，提交 `0abd047 docs: add resume-oriented project summary`。
+- 完成内容：`README.md` 已在“项目定位”之后、“技术栈”之前新增“简历版项目介绍”小节。
+- 完成边界：仅新增 4 句话的短小节，没有重写 README，没有修改 Java / Vue 业务代码。
+- 表达重点：突出 Spring Boot 3、REST API、分层设计、MyBatis-Plus、Flyway、H2/MySQL、统一响应、状态流转、后端测试，以及 Prompt 模板、生成记录、人工确认、local-rule 演示生成链路和 OpenAI-compatible Provider 代码层适配。
+- 边界保持：没有把项目夸大为生产级大模型平台；继续说明 `local-rule` 不是真实 LLM 推理，日志分析不是 AI 自动推理，tokenUsage 是估算，Docker runtime 未完整成功，`ai_task` 不是完整任务系统，`InMemoryStore` 不是默认主流程持久化。
+
+**P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史**
 
 - 状态：待处理。
-- 目标：先只读审查 README，不直接修改 README。
-- 审查重点：判断是否需要补一段更适合大三 Java 后端实习简历的项目介绍，让项目更稳地表达为 Java 后端工程化 + AI 工具链项目。
-- 不可夸大：不能写成生产级大模型平台；不能把 `local-rule` 写成真实 LLM；不能把日志规则引擎写成 AI 推理。
-- 验收：输出是否建议修改 README 的只读结论；如需修改，应作为后续单独任务处理。
+- 目标：判断 P1-1、P1-2 是否已闭环，并决定是否进入最终验收报告阶段。
+- 审查重点：文档是否一致、是否还有夸大表述、是否适合进入最终验收。
+- 不可扩大：不要继续扩功能，不要运行 Docker，不要把 Docker runtime 写成完整部署成功。
+- 验收：输出只读审查结论；如需进入最终验收报告阶段，应作为后续单独任务处理。
 
 **已完成：README token 估算说明（原 P1-2）**
 
 - 状态：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
 - 当前结果：README 已说明 local-rule 模式下 tokenUsage 是基于文本长度的估算值，不是真实 tokenizer；OpenAI-compatible 模式下只有 provider 返回 `usage` 字段时才可记录真实 usage。
 
-**P1-3：local-rule 生成内容性质未在文档中说清楚（已完成）**
+**已完成：local-rule 生成内容性质说明（原 P1-3）**
 
 - 状态：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
 - 当前结果：README 已明确 `local-rule` 是本地规则/模板生成，不是真实 LLM 推理；OpenAI-compatible Provider 是代码层适配，当前仓库不提交真实 API Key，也不把真实模型端到端调用写成已稳定验收。
@@ -298,6 +328,17 @@
   - [x] 说明默认主流程应使用 MyBatis-Plus + H2/MySQL
   - [x] 本次只改注释，不改变运行行为；未运行 `mvn test`
 
+**任务5：补充 README 简历版项目介绍（已完成）**
+
+- 目标：在 `README.md` 的“项目定位”之后、“技术栈”之前新增“简历版项目介绍”短小节。
+- 完成提交：`0abd047 docs: add resume-oriented project summary`。
+- 涉及文件：`README.md`。
+- 完成边界：仅新增 4 句话的短小节，没有重写 README，没有修改 Java / Vue 业务代码，没有修改 `HANDOFF.md`、`TODO.md` 或 `InMemoryStore.java`。
+- 验收方式：
+  - [x] 小节标题为“简历版项目介绍”
+  - [x] 覆盖 Java 后端工程化能力和 AI Coding 工具链能力
+  - [x] 继续压住 local-rule、日志规则、tokenUsage、Docker runtime、ai_task、InMemoryStore 等边界
+
 ---
 
 #### Codex 修复结果（已同步）
@@ -306,6 +347,7 @@
 - P0-2 / 任务2：已完成，提交 `bce0368 feat: add ai task query endpoint`。
 - README 边界澄清 / 任务3：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
 - P1-1 / 任务4：已完成，提交 `9babb4f docs: clarify InMemoryStore demo profile boundary`；仅补充 `InMemoryStore.java` 类头 Javadoc，明确其仅用于 `memory-demo` / 无数据库轻量演示场景，不是默认 dev/test/prod 主流程持久化方案。
+- P1-2 / 任务5：已完成，提交 `0abd047 docs: add resume-oriented project summary`；仅在 `README.md` 新增“简历版项目介绍”短小节，没有重写 README，并继续保持所有边界说明。
 - Docker Compose 端口避让：已完成配置修改，提交 `e38126c chore: avoid Docker compose port conflict`；runtime `up --build` 未完整成功，原因是 Docker Hub 镜像元数据请求 `i/o timeout`。
-- 当前剩余优先任务：P1-2 只读审查 README.md 中“简历可写亮点”和“面试回答口径”。
+- 当前剩余优先任务：P1-3 只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史，判断 P1-1、P1-2 是否已闭环，并决定是否进入最终验收报告阶段。
 - 本条同步仅更新交接信息，不代表本轮修改业务代码。

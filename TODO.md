@@ -33,6 +33,7 @@
 - **GitHub Actions CI** 配置存在，包含后端 `mvn -B verify` 和前端 `npm ci && npm run build`
 - **环境审计文档**：`docs/ENVIRONMENT_CHECK.md` 已记录本机工具版本和 Docker Compose 验证记录
 - **Git 仓库**：当前分支 `resume-optimization-v1`，协作规则已提交
+- **README 简历版项目介绍**：已新增“简历版项目介绍”短小节，面向大三 Java 后端实习 / AI 工具开发 / Java + AI 应用投递场景，并保持项目真实边界
 
 ---
 
@@ -110,14 +111,23 @@
 - 验证说明：未运行 `mvn test`，原因是本次只修改 Javadoc 注释，不改变运行行为。
 - 验收：类头 Javadoc 清晰，阅读代码不再产生“内存存储是默认生产持久化”的歧义。
 
-### P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”
+### P1-2：README 简历版项目介绍 ✅ 已完成
+
+- 状态：**done**
+- 完成提交：`0abd047 docs: add resume-oriented project summary`
+- 完成内容：`README.md` 已在“项目定位”之后、“技术栈”之前新增“简历版项目介绍”小节。
+- 完成边界：仅新增 4 句话的短小节，没有重写 README，没有修改 Java / Vue 业务代码。
+- 表达重点：突出 Java 后端工程化能力，包括 Spring Boot 3、REST API、Controller -> Service -> Mapper 分层、MyBatis-Plus、Flyway、H2/MySQL Profile、统一响应、状态流转和后端测试；也突出 Prompt 模板、生成记录、人工确认、local-rule 演示生成链路与 OpenAI-compatible Provider 代码层适配。
+- 边界保持：没有把项目夸大为生产级大模型平台；继续说明 `local-rule` 不是真实 LLM 推理，日志分析不是 AI 自动推理，tokenUsage 是估算，Docker runtime 未完整成功，`ai_task` 不是完整任务系统，`InMemoryStore` 不是默认主流程持久化。
+
+### P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史
 
 - 状态：**待处理**
-- 背景：P0 与 P1-1 已收口后，需要确认 README 是否还需要一段更适合大三 Java 后端实习简历的项目介绍。
-- 涉及文件：只读审查 `README.md`，下一轮先不直接修改 README。
-- 审查重点：判断项目是否可以更稳地表达为 Java 后端工程化 + AI 工具链项目。
-- 不可夸大：不能写成生产级大模型平台；不能把 `local-rule` 写成真实 LLM；不能把日志规则引擎写成 AI 推理。
-- 验收：输出只读审查结论；如果确实需要修改 README，应作为后续单独任务处理。
+- 背景：P1-1 和 P1-2 已完成后，需要确认文档状态、提交历史和边界表达是否一致。
+- 涉及文件：只读审查 `README.md`、`HANDOFF.md`、`TODO.md` 和最近提交历史，下一轮先不直接修改文件。
+- 审查重点：文档是否一致、是否还有夸大表述、是否适合进入最终验收报告阶段。
+- 不可扩大：不要继续扩功能；不要运行 Docker；不要把 Docker runtime 写成完整部署成功。
+- 验收：输出只读审查结论；如果建议进入最终验收报告阶段，应作为后续单独任务处理。
 
 ### 已完成：README 补充 local-rule 和 token 估算说明（原 P1-2）
 
@@ -129,7 +139,7 @@
 - 验收：描述与实现一致；不引入任何虚构功能
 - 完成提交：`5908a7b docs: clarify resume README boundaries`
 
-### P1-3：HANDOFF.md 持续记录 Claude 审查和 Codex 修复结果
+### 协作记录维护：HANDOFF.md 持续记录 Claude 审查和 Codex 修复结果
 
 - 状态：**进行中**（Claude 简历版只读审查已追加，Codex 修复结果待填写）
 - 背景：每轮修复后，Codex 应在 HANDOFF.md 的"Codex 修复结果（待填写）"区填写实际结果
@@ -163,13 +173,13 @@
 
 ## 下一轮建议任务
 
-**P1-2：只读审查 README.md 中“简历可写亮点”和“面试回答口径”。**
+**P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史。**
 
-下一轮先只读审查，不直接修改 README。
+下一轮先只读审查，不直接修改文件。
 
-审查重点是判断是否可以把项目更稳地表达为 Java 后端工程化 + AI 工具链项目。
+审查重点是判断 P1-1、P1-2 是否已闭环，文档是否一致，是否还有夸大表述，以及是否适合进入最终验收报告阶段。
 
-边界要求：不能夸大为生产级大模型平台；不能把 `local-rule` 写成真实 LLM；不能把日志规则引擎写成 AI 推理。
+边界要求：不要继续扩功能；不要运行 Docker；不要把 Docker runtime 写成完整部署成功；继续保持 `local-rule`、日志规则、tokenUsage、`ai_task`、`InMemoryStore` 的真实边界。
 
 ---
 
