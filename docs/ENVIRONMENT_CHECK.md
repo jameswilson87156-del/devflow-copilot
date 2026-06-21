@@ -174,3 +174,131 @@ docker compose up --build
 ## 8. 变更边界声明
 
 本轮只新增环境审计报告 `docs/ENVIRONMENT_CHECK.md`。没有修改 Java/Vue 业务代码，没有处理 `ai_task`，没有修改 `InMemoryStore`，没有修改 README 简历描述，没有新增接口，没有安装任何软件，没有修改系统环境变量。检查产生的 `target`、`dist`、`node_modules` 和 `data` 均保持为 Git 忽略项；没有提交 `.env`、日志、缓存、安装包或构建产物。
+
+## 2026-06-21 — WSL Docker Compose Plugin 安装记录
+
+### 安装前审查
+
+- 检查时间：`2026-06-21 22:12:28 +08:00`（Asia/Shanghai）。
+- WSL 发行版：`Ubuntu 22.04.5 LTS`，codename `jammy`，架构 `amd64`。
+- Docker Engine：客户端和服务端均为 `29.1.3`，Server 正常；检查时有 3 个运行容器、4 个镜像，Docker Root Dir 为 `/var/lib/docker`。
+- Engine 包来源：Ubuntu 仓库的 `docker.io 29.1.3-0ubuntu3~22.04.2`，候选来自 `jammy-updates/universe` 与 `jammy-security/universe`，不是 Docker CE。
+- 已有运行时包：`containerd 2.2.1-0ubuntu1~22.04.1`、`runc 1.3.4-0ubuntu1~22.04.1`。
+- 系统原有旧版独立命令包：`docker-compose 1.29.2-1`；它不提供 `docker compose` CLI Plugin。
+- 安装前 `/etc/apt/sources.list.d/` 为空，系统 apt sources 中不存在 `download.docker.com`。因此 Ubuntu 当前配置的软件源无法解析官方包名 `docker-compose-plugin`，此前出现 `E: Unable to locate package docker-compose-plugin`。
+
+### Docker 官方 apt repository 配置
+
+由于当前终端无法交互输入 sudo 密码，实际在同一个 `Ubuntu-22.04` 发行版内通过 WSL root 用户执行等价的官方 apt 命令，没有修改 Windows 权限或环境变量。
+
+执行内容摘要：
+
+```bash
+apt-get update
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update
+```
+
+结果：
+
+- Docker Release GPG key 获取成功，指纹为 `9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`。
+- 新增 keyring：`/etc/apt/keyrings/docker.gpg`。
+- 新增 apt source：`/etc/apt/sources.list.d/docker.list`。
+- 官方仓库 `https://download.docker.com/linux/ubuntu jammy stable` 索引更新成功。
+- `curl` 和 `gnupg` 已是最新版本；`ca-certificates` 从 `20240203~22.04.1` 升级到 `20260601~22.04.1`。
+- 仓库配置后，`docker-compose-plugin` 候选版本为 `5.1.4-1~ubuntu.22.04~jammy`。
+
+### 安装安全检查与 Plugin 安装
+
+安装前运行：
+
+```bash
+apt-get -s install docker-compose-plugin
+```
+
+模拟结果为 `0 upgraded, 2 newly installed, 0 to remove`，仅计划新增：
+
+- `docker-compose-plugin 5.1.4-1~ubuntu.22.04~jammy`
+- 依赖 `docker-buildx-plugin 0.34.1-1~ubuntu.22.04~jammy`
+
+模拟结果没有移除、替换或升级 `docker.io`、`containerd`、`runc`。确认无破坏性变更后执行：
+
+```bash
+apt-get install -y docker-compose-plugin
+```
+
+安装成功，实际新增上述两个 Plugin 包，占用约 105 MB；原有 `docker-compose 1.29.2-1` 包未删除。
+
+### 安装后验证
+
+版本检查：
+
+```text
+Docker Compose version v5.1.4
+Docker version 29.1.3, build 29.1.3-0ubuntu3~22.04.2
+```
+
+`docker info` 继续正常显示 Server 信息，并识别以下 CLI Plugins：
+
+- Compose：`v5.1.4`，路径 `/usr/libexec/docker/cli-plugins/docker-compose`
+- Buildx：`v0.34.1`，路径 `/usr/libexec/docker/cli-plugins/docker-buildx`
+
+现有 Docker Engine、3 个运行容器、镜像、volume 和 `/var/lib/docker` 数据没有被删除或重装；没有重启 WSL，也没有重启电脑。
+
+审查过程有一项已如实记录的非破坏性异常：第一次执行包列表 grep 时，PowerShell/WSL 引号传递错误导致 `containerd` 被当作命令调用，并立即以 `chmod /var/lib/containerd: operation not permitted` 失败。随后改正引号并完成只读检查；没有产生包变更、服务替换或数据清理。
+
+### Compose 配置验证
+
+运行：
+
+```bash
+cd /mnt/d/workhome/ai-coding-workbench
+docker compose config
+```
+
+结果：成功，退出码为 0。Compose 能完整解析：
+
+- 三个服务：`mysql`、`backend`、`frontend`
+- backend 对 MySQL healthcheck 的依赖关系
+- 端口：MySQL `3306`、backend `8080`、frontend `5173`
+- 默认网络 `ai-coding-workbench_default`
+- 持久化卷 `ai-coding-workbench_devflow-mysql-data`
+
+本轮没有运行 `docker compose up --build`，没有拉取项目镜像、构建镜像或创建本项目的容器/网络/volume；该动作仍需后续人工确认。
+
+### 项目重新验证
+
+Windows 后端：
+
+```text
+mvn test
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+Total time: 14.001 s
+```
+
+Windows 前端：
+
+```text
+npm run build
+vue-tsc --noEmit && vite build
+1961 modules transformed
+built in 9.10s
+```
+
+前端构建成功，仍有已知的 `@vueuse/core` PURE 注释提示和大于 500 kB 的 chunk 体积警告。本轮没有运行 `npm install`。
+
+### 边界确认
+
+- Docker Desktop：未安装，当前不需要。
+- MySQL：未在 Windows 或 WSL 安装；项目本地默认使用 H2。Compose 中的 MySQL 仅为尚未启动的容器服务定义。
+- Windows PATH：未修改。
+- Docker Engine：未删除、未重装、未替换，仍使用 Ubuntu `docker.io 29.1.3`。
+- 项目业务代码：未修改；未处理 `ai_task`、`InMemoryStore` 或 README 简历描述。
+- 项目文件：本节仅更新 `docs/ENVIRONMENT_CHECK.md`；构建产物与缓存保持为 Git 忽略项。
