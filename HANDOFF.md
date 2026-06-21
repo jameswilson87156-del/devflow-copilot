@@ -71,3 +71,190 @@
 - 遗留问题：
 - 下一步：
 
+---
+
+### 2026-06-21 — Claude — 简历版只读审查
+
+#### 审查对象
+
+- 功能名称：项目整体简历可用性评估
+- 审查文件范围：README.md、AGENTS.md、CLAUDE.md、HANDOFF.md（空模板）、docs/（全部 md 文件）、backend/src/main/java/（全部 Java 源码）、backend/src/test/（全部测试）、frontend/src/（App.vue、WorkbenchView.vue）、db/migration/V1__create_core_schema.sql、docs/images/（截图目录）
+- 审查者：Claude（只读，未执行任何构建或测试命令）
+
+#### 当前结论
+
+项目整体完成度在同类大三实习项目中属于上游水平。后端分层清晰、状态机设计正确、15 个集成测试有据可查、截图文件实际存在、Provider 抽象和 Flyway 迁移均有真实代码落地。主要风险集中在三件事：ai_task 表空壳、InMemoryStore 遗留代码位置容易误导、local-rule 生成内容是模板 boilerplate 而非真实 LLM 输出——后两件需要在文档中说清楚，第一件需要补最小实现或说明。
+
+关于 Git 仓库状态：旧验收记录（final-acceptance-report.md）曾显示 `fatal: not a git repository`，但当前项目已在 `resume-optimization-v1` 分支并已提交协作规则，此问题当前状态标记为**已解决**，不再列为 P0。后续建议保持真实小步提交，不伪造历史，不为凑 commit 数拆旧代码假提交。
+
+#### 已确认可写进简历的真实能力
+
+以下技术点均有对应源码，面试时可直接展示：
+
+- Spring Boot 3 + Java 17 分层架构（controller / service / service.impl / provider / mapper / entity / dto）
+- MyBatis-Plus 持久化 + Flyway 数据库迁移（V1 建表5张，FK 约束完整）
+- H2（dev/test）/ MySQL（prod）Profile 双数据库支持
+- 生成状态机 `GENERATING → READY_FOR_REVIEW → SAVED → CONFIRMED`，`canTransitionTo` / `allowedTargets` 逻辑正确，非法流转返回 HTTP 409
+- Prompt 模板变量渲染（正则替换 `{{variable}}`）、缺填报 TemplateRenderException、模板版本记录进 generation_record
+- OpenAI-compatible Provider（真实 RestClient HTTP 调用 `/v1/chat/completions`）+ local-rule 降级
+- DTO 校验（`@Valid`）+ GlobalExceptionHandler 统一 ApiResponse 返回
+- 15 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试（`@Transactional` 回滚隔离）
+- Vue 3 + TypeScript + Element Plus 前端，WorkbenchView 三栏布局，状态机按钮联动
+- Docker Compose（backend / frontend / mysql 三服务）+ GitHub Actions CI 配置文件存在
+
+#### 不能夸大的能力
+
+以下内容不得在简历或面试中声称为已实现：
+
+- **不能写**"接入了真实大模型" —— 默认运行模式是 local-rule，生成内容是模板 boilerplate；只有配置了真实 API Key 并端到端验证后才可写
+- **不能写**"AI 智能日志分析" —— 日志诊断是关键词规则引擎（8种异常类型硬编码），不是 LLM 推理
+- **不能写**"毫秒级 latency 追踪" —— local-rule 的 costTimeMs 实测约为 0–1ms，不代表 LLM 网络延迟
+- **不能写**"SSE 流式输出" —— 当前是同步请求，无 SSE
+- **不能写**"Docker Compose 已验证部署" —— CI 和 Compose 文件存在，但未实际执行 `docker compose up --build`（本机 Docker 不可用，final-acceptance-report 有记录）
+
+---
+
+#### 当前 P0 问题
+
+**P0-1：TODO.md 不存在**
+
+- 文件/位置：项目根目录（无此文件）
+- 证据：`Glob("TODO.md")` 未找到任何匹配，但 AGENTS.md 第1条明确要求"开始工作前必须读取 TODO.md"
+- 影响：文档自相矛盾；Codex 执行任何任务前按规则会先读取该文件，文件缺失导致上下文断裂
+- 严重程度：中
+- 建议：新建 `TODO.md`，列出已完成功能和当前待处理项
+- 验收：`TODO.md` 存在，内容与项目现状一致；AGENTS.md 读取流程可正常走通
+
+**P0-2：ai_task 表和 Mapper 无对应 Service / Controller**
+
+- 文件/位置：`db/migration/V1__create_core_schema.sql`（有 ai_task 表定义）、`AiTaskMapper.java`（存在）、无 AiTaskService、无 AiTaskController
+- 证据：Glob 搜索到 `AiTaskMapper.java`，全量 Java 文件列表中未见 AiTaskService 或 AiTaskController
+- 影响：面试官翻 V1 SQL 或 mapper 目录会直接问"这个 Mapper 是干嘛的"，当前无法给出完整答案
+- 严重程度：中
+- 建议：二选一 —— (A) 添加最简 `GET /api/tasks?projectId=` 接口，返回空列表；(B) 在 AiTaskMapper 类头注释标注"为后续扩展预留，当前无业务实现"，并在 README 中同步说明
+- 验收：面试官问起有完整的答案；若选方案A，`GET /api/tasks?projectId=1` 返回 HTTP 200
+
+---
+
+#### 当前 P1 问题
+
+**P1-1：InMemoryStore 位置容易引起误解**
+
+- 文件/位置：`backend/src/main/java/com/devflow/copilot/service/impl/InMemoryStore.java`
+- 证据：文件在 service/impl 包下，虽有 `@Profile("memory-demo")` 保护，但面试官翻代码会立即问"这个还在用吗"
+- 影响：造成"项目还有内存存储？数据库持久化是真的吗？"的困惑
+- 建议：在类头 Javadoc 注释中标注"演示/备份用途，主存储已切换为 MyBatis-Plus + H2/MySQL，该类仅在 memory-demo profile 下激活"；或整理到 `legacy/` 子包
+- 验收：阅读代码不产生歧义
+
+**P1-2：README 未说明 token 估算方式**
+
+- 文件/位置：README.md "核心亮点" 和"生成历史"功能描述
+- 证据：`LocalRuleGenerationProvider.estimateTokens()` = `text.length() / 3.5`，不是真实 tokenizer
+- 影响：面试官问"你们怎么统计 token"时，若不主动说明会造成误解
+- 建议：在 README 相关位置加一句"local-rule 模式下 token 为按字符数估算（length / 3.5），非真实 tokenizer；OpenAI-compatible 模式下使用 API 返回的真实 usage 字段"
+- 验收：README 描述与 `LocalRuleGenerationProvider` 实现一致
+
+**P1-3：local-rule 生成内容性质未在文档中说清楚**
+
+- 文件/位置：README.md、docs/interview-guide.md
+- 证据：local-rule 生成的 commit message 固定为 `feat(devflow): improve AI generation workflow`，需求拆解也是预置模板套语，不是 LLM 推理结果
+- 影响：面试时若被问"AI 能生成什么"，演示后对方会看出输出是模板，若没有预期管理会造成负面印象
+- 建议：在 README 的"LLM Provider 配置"或"核心功能"段落补充一句"默认 local-rule 模式生成结构化模板内容用于工程演示；接入真实模型需配置 OpenAI-compatible Provider"；interview-guide.md 已有相关 Q&A，可保持不变
+- 验收：文档能引导面试官正确理解两种模式的区别
+
+**P1-4：HANDOFF.md 原为空白模板，无实际审查记录**
+
+- 文件/位置：HANDOFF.md
+- 证据：原文件仅包含占位符 `YYYY-MM-DD HH:mm`，无任何真实记录
+- 影响：AGENTS.md 要求启动前读取 HANDOFF.md，空模板无法传递项目状态
+- 建议：追加本次审查记录（即本条目）
+- 验收：本条目追加完成即视为解决
+
+---
+
+#### 当前 P2 问题
+
+**P2-1：OpenAI-compatible Provider 无真实端到端测试**
+
+- 当前状态：只测试了缺 API Key 时的降级逻辑，未配置真实 Key 做端到端调用
+- 建议：配置一个低成本兼容服务（如 DeepSeek、Groq），跑通真实调用，更新 README 说明已验证
+
+**P2-2：前端无单元测试**
+
+- 当前状态：只有 `npm run build` 通过，无 Vitest / Vue Test Utils 测试
+- 建议：为 StatusTag 组件或 WorkbenchView 核心计算属性添加 1–2 个 Vitest 测试
+
+**P2-3：Docker Compose 未实际运行验证**
+
+- 当前状态：Compose 文件静态校验通过，但 `docker compose up --build` 未在有 Docker 的环境执行
+- 建议：在可用 Docker 环境中实际跑一遍，把输出记录进 HANDOFF.md
+
+**P2-4：缺少动态演示材料**
+
+- 当前状态：有静态截图10张，无 GIF 或视频演示
+- 建议：录制 30 秒 GIF 展示 Workbench 生成→保存→确认流程，放入 README
+
+---
+
+#### 交给 Codex 的第一批任务
+
+> 规则：每次只处理一个任务，完成后回写"Codex 修复结果"再开始下一个。
+
+**任务1：创建或完善 TODO.md**
+
+- 目标：在项目根目录创建 `TODO.md`，记录已完成功能和当前待处理项
+- 涉及文件：`TODO.md`（新建）
+- 不能破坏：其他任何文件不做改动
+- 不在本轮处理：其他 P0/P1 问题
+- 验收方式：
+  - [ ] `TODO.md` 文件存在于项目根目录
+  - [ ] 文件内容列出"已完成"与"待处理"两个分区，内容与项目实际现状一致
+  - [ ] AGENTS.md 描述的"启动前读取 TODO.md"流程可正常执行
+
+**任务2：处理 ai_task 空壳问题**
+
+- 目标：选择方案A或B —— A: 添加最简 `GET /api/tasks?projectId=` 返回空列表；B: 在 AiTaskMapper 头部 Javadoc 注释中说明"为后续扩展预留，当前无业务实现"
+- 涉及文件：方案A 涉及 `AiTaskMapper.java`、新建 `AiTaskService.java`、`AiTaskController.java`；方案B 仅涉及 `AiTaskMapper.java`
+- 不能破坏：现有15个测试须全部通过，`mvn test` 结果不能回归
+- 不在本轮处理：ai_task 的完整 CRUD
+- 验收方式：
+  - [ ] 选择了明确的方案（A 或 B）并实施
+  - [ ] 若选方案A：`GET /api/tasks?projectId=1` 返回 HTTP 200 和空列表；`mvn test` 仍15个通过
+  - [ ] 若选方案B：AiTaskMapper.java 有 Javadoc 注释说明其用途
+  - [ ] 面试时对"这个 Mapper 是干嘛的"有完整答案
+
+**任务3：补充 README 中 token 估算和 local-rule 说明**
+
+- 目标：在 README.md 相关段落补充两句话：(1) local-rule token 是字符数估算；(2) local-rule 生成的是结构化模板内容，非 LLM 推理
+- 涉及文件：`README.md`
+- 不能破坏：README 整体结构和其他内容保持不变
+- 不在本轮处理：其他文档修改
+- 验收方式：
+  - [ ] README 中出现对 token 估算方式的准确说明
+  - [ ] README 中出现对 local-rule 内容性质的准确说明
+  - [ ] 不引入任何夸大或虚构的功能描述
+
+**任务4：整理 InMemoryStore 的 demo-only 说明**
+
+- 目标：在 `InMemoryStore.java` 类头添加 Javadoc 注释，说明该类仅在 `memory-demo` profile 下激活，主存储已切换为 MyBatis-Plus + H2/MySQL
+- 涉及文件：`backend/src/main/java/com/devflow/copilot/service/impl/InMemoryStore.java`
+- 不能破坏：`@Profile("memory-demo")` 注解不得删除，类功能不得改变
+- 不在本轮处理：包结构调整
+- 验收方式：
+  - [ ] InMemoryStore.java 类头有清晰的 Javadoc 注释
+  - [ ] 注释内容说明"演示/备份用途，memory-demo profile 专用，主流程不加载"
+  - [ ] `mvn test` 仍15个通过
+
+---
+
+#### Codex 修复结果（待填写）
+
+任务1 完成后在此补充：
+
+- 修复时间：
+- 修改文件：
+- 实际运行命令：
+- 实际结果：
+- 未验证内容：
+- 剩余风险：
+
