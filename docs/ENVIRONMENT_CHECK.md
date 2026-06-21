@@ -302,3 +302,117 @@ built in 9.10s
 - Docker Engine：未删除、未重装、未替换，仍使用 Ubuntu `docker.io 29.1.3`。
 - 项目业务代码：未修改；未处理 `ai_task`、`InMemoryStore` 或 README 简历描述。
 - 项目文件：本节仅更新 `docs/ENVIRONMENT_CHECK.md`；构建产物与缓存保持为 Git 忽略项。
+
+## 2026-06-21 — Docker Compose 端口避让与 smoke test
+
+### 本轮目标与边界
+
+- 已确认选择方案二：不停止现有 `sub2api`，改本项目 Docker Compose 后端宿主端口。
+- 端口占用检查命令：
+  ```bash
+  wsl -d Ubuntu-22.04 -- bash -lc "ss -ltnp | grep -E ':8080|:18080|:3306|:5173|:5174' || true"
+  ```
+- 检查结果：`127.0.0.1:8080` 正在监听，占用情况与已知的 `sub2api` 一致；`18080` 未出现在监听列表中，判定为空闲。
+- 本轮没有停止 `sub2api`、`sub2api-postgres`、`sub2api-redis`，也没有删除任何 Docker 容器、镜像或 volume。
+- 本轮没有修改 Java/Vue 业务代码，没有修改数据库配置，没有处理 `ai_task`、`InMemoryStore` 或 README 简历描述。
+
+### Compose 端口配置变更
+
+- 修改文件：`docker-compose.yml`。
+- 后端服务端口从固定宿主端口：
+  ```yaml
+  - "8080:8080"
+  ```
+  改为可配置宿主端口：
+  ```yaml
+  - "${BACKEND_HOST_PORT:-18080}:8080"
+  ```
+- 容器内部端口仍为 `8080`。
+- 前端 Docker/Nginx 配置中存在 `proxy_pass http://backend:8080/api/;`，这是 Compose 内部服务名和容器内部端口，不是宿主端口，因此本轮不需要同步修改。
+
+### docker compose config
+
+执行命令：
+```bash
+cd /mnt/d/workhome/ai-coding-workbench
+docker compose config
+```
+
+结果：成功，退出码 0。关键解析结果：
+
+- 服务：`mysql`、`backend`、`frontend`。
+- `backend` 端口解析为 `published: "18080"`、`target: 8080`。
+- `frontend` 端口解析为 `published: "5173"`、`target: 80`。
+- `mysql` 端口保持 `published: "3306"`、`target: 3306`。
+- 网络仍为 `ai-coding-workbench_default`，volume 仍为 `ai-coding-workbench_devflow-mysql-data`。
+
+### docker compose up --build smoke test
+
+执行命令：
+```bash
+cd /mnt/d/workhome/ai-coding-workbench
+docker compose up --build
+```
+
+结果：失败，未进入服务启动阶段。失败原因是 Docker Hub 镜像元数据请求超时，不是端口冲突。
+
+关键错误：
+```text
+Image mysql:8.4 Pulled
+Image ai-coding-workbench-backend Building
+Image ai-coding-workbench-frontend Building
+#7 ERROR: failed to do request: Head "https://registry-1.docker.io/v2/library/eclipse-temurin/manifests/17-jre": dial tcp 198.18.1.41:443: i/o timeout
+#5 ERROR: failed to do request: Head "https://registry-1.docker.io/v2/library/nginx/manifests/1.27-alpine": dial tcp 198.18.1.41:443: i/o timeout
+target backend: failed to solve: DeadlineExceeded: eclipse-temurin:17-jre: failed to resolve source metadata for docker.io/library/eclipse-temurin:17-jre
+```
+
+### 启动后验证结果
+
+- 后端验证：未通过。由于 `docker compose up --build` 在构建阶段失败，后端容器未创建，`http://127.0.0.1:18080/api/dashboard/stats` 返回连接失败：
+  ```text
+  curl: (7) Failed to connect to 127.0.0.1 port 18080 after 0 ms: Connection refused
+  ```
+- 前端验证：未通过。由于前端容器未创建，`http://127.0.0.1:5173/` 和 `http://127.0.0.1:5173/api/dashboard/stats` 均返回连接失败。
+- 数据库容器验证：本项目 MySQL 容器未创建；`docker compose ps` 输出为空。失败前已拉取 `mysql:8.4` 镜像，但服务没有启动。
+- 容器状态验证：`docker ps` 仅显示既有 `sub2api`、`sub2api-postgres`、`sub2api-redis` 三个容器仍在运行。
+
+### docker compose down
+
+执行命令：
+```bash
+cd /mnt/d/workhome/ai-coding-workbench
+docker compose down
+```
+
+结果：成功，退出码 0；未使用 `-v`，未删除 volume 或镜像。执行后 `docker compose ps` 为空；`docker ps` 仍显示 `sub2api`、`sub2api-postgres`、`sub2api-redis` 运行中，确认未影响现有容器。
+
+### 项目测试
+
+Windows 后端：
+```text
+cd D:\workhome\ai-coding-workbench\backend
+mvn test
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+Total time: 13.061 s
+```
+
+Windows 前端：
+```text
+cd D:\workhome\ai-coding-workbench\frontend
+npm run build
+vue-tsc --noEmit && vite build
+1961 modules transformed
+built in 8.49s
+```
+
+前端构建成功，仍有既有提示：
+
+- `@vueuse/core` 的 PURE 注释位置提示；
+- chunk 大于 500 kB 的 Vite 警告。
+
+### 剩余风险
+
+- Docker Compose 端口避让已通过静态配置验证，后端宿主端口解析为 `18080`。
+- 完整 runtime smoke test 尚未成功跑通，阻塞点是访问 Docker Hub `registry-1.docker.io` 的网络超时；需要在镜像元数据可正常解析或基础镜像已缓存后重新执行 `docker compose up --build`。
+- 本轮未修改业务代码，失败原因不通过修改 Java/Vue 业务代码绕过。

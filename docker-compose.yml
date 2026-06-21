@@ -29,7 +29,7 @@ services:
       DEVFLOW_AI_MODEL: ${DEVFLOW_AI_MODEL:-gpt-4.1-mini}
       DEVFLOW_AI_FALLBACK_TO_LOCAL: ${DEVFLOW_AI_FALLBACK_TO_LOCAL:-true}
     ports:
-      - "8080:8080"
+      - "${BACKEND_HOST_PORT:-18080}:8080"
     depends_on:
       mysql:
         condition: service_healthy
