@@ -1,222 +1,144 @@
-﻿# DevFlow Copilot 最终验收报告
+# DevFlow Copilot 最终验收报告
 
-## 1. 总体结论
+更新时间：2026-06-22（Asia/Shanghai）
 
-完成。当前项目已具备可写入大三实习简历的工程化闭环：MyBatis-Plus 持久化、H2/MySQL profile、Flyway、LLM Provider、local-rule 降级、Prompt 模板渲染、状态机、DTO 校验、全局异常处理、15 个后端测试、前端构建、Docker Compose 配置和 GitHub Actions 均已完成并验证。
+## 一、验收结论
 
-可以进入简历版收口。
+- 当前分支：`resume-optimization-v1`。
+- 本轮验收开始前已执行 `git status --short`，当前工作区为 clean。
+- DevFlow Copilot / AI Coding Workbench 当前适合写进大三 Java 后端实习简历。
+- 项目定位是 AI Coding 工作流控制台 MVP / Java 后端工程化项目，重点展示后端分层设计、接口设计、数据持久化、状态流转、测试意识和 AI 工具链工程化边界。
+- 不应包装成生产级大模型平台、线上 SaaS 或真实稳定接入大模型的平台。
 
-## 2. 断点续跑说明
+## 二、关键提交链路
 
-本轮从上一轮大量改造后的工作区继续验收，没有重做、回滚或撤销已有改动。执行 `git status --short`、`git diff --stat`、`git diff --name-only` 时发现当前目录不是 Git 仓库，因此无法通过 Git 统计上一轮“71 个文件改动”。随后逐项检查关键文件，后端 Provider、模板渲染、状态机、Flyway、测试、前端页面、README、Docker/CI 和文档文件均存在。
+按时间顺序梳理当前 `resume-optimization-v1` 分支中与本轮简历优化收口相关的关键提交：
 
-## 3. 修改文件清单
+| 提交 | 说明 |
+| --- | --- |
+| `68dd3b8 add claude codex collaboration rules` | 增加 Claude / Codex 协作规则，明确每轮任务边界、文档交接和小步提交方式。 |
+| `dbd986b docs: add resume review handoff` | 增加简历版审查交接记录，为后续 P0 / P1 优化提供事实基础。 |
+| `4a3283b docs: add environment check report` | 记录本机环境和工具检查结果，为后续验收说明提供依据。 |
+| `64cd2d3 docs: record WSL Docker compose plugin setup` | 记录 WSL Docker / Compose Plugin 环境状态。 |
+| `e38126c chore: avoid Docker compose port conflict` | 调整 Docker Compose 后端宿主端口，避免与本机已有服务冲突。 |
+| `d5a4486 docs: add project TODO roadmap` | 创建根目录 `TODO.md`，补齐 AGENTS -> HANDOFF -> TODO 的任务读取闭环。 |
+| `5908a7b docs: clarify resume README boundaries` | 澄清 README 中 local-rule、tokenUsage、日志规则和 Docker runtime 等边界，降低简历夸大风险。 |
+| `3a26cd9 docs: update handoff after resume README clarification` | 同步 README 边界澄清后的交接状态。 |
+| `bce0368 feat: add ai task query endpoint` | 为 `ai_task` 增加最小只读查询入口 `GET /api/tasks?projectId={projectId}`。 |
+| `c57c671 docs: mark ai task query endpoint complete` | 标记 `ai_task` 最小查询入口完成，说明其不是完整任务系统。 |
+| `67ad212 docs: update test count and ai tasks api in README` | 同步 README 中后端测试数量和 `ai_task` API 说明。 |
+| `9babb4f docs: clarify InMemoryStore demo profile boundary` | 为 `InMemoryStore.java` 补充 demo-only / `memory-demo` profile 边界 Javadoc。 |
+| `f1e44c9 docs: mark InMemoryStore boundary clarification complete` | 同步 P1-1 完成状态，记录 InMemoryStore 不是默认主流程持久化。 |
+| `0abd047 docs: add resume-oriented project summary` | 在 README 中新增“简历版项目介绍”小节，面向大三 Java 后端实习投递场景。 |
+| `dcb1c2f docs: mark resume README summary complete` | 同步 P1-2 完成状态，并建议下一步进入最终验收收口。 |
 
-### backend
+## 三、测试与构建结果
 
-- `backend/pom.xml`
-- `backend/src/main/resources/application.yml`
-- `backend/src/main/resources/application-dev.yml`
-- `backend/src/main/resources/application-prod.yml`
-- `backend/src/main/resources/db/migration/V1__create_core_schema.sql`
-- `backend/src/main/resources/db/migration/V2__seed_demo_data.sql`
-- `backend/src/main/java/com/devflow/copilot/common/GenerationStatus.java`
-- `backend/src/main/java/com/devflow/copilot/common/GlobalExceptionHandler.java`
-- `backend/src/main/java/com/devflow/copilot/config/AiProviderProperties.java`
-- `backend/src/main/java/com/devflow/copilot/service/provider/*`
-- `backend/src/main/java/com/devflow/copilot/service/impl/PromptTemplateRenderServiceImpl.java`
-- `backend/src/main/java/com/devflow/copilot/service/impl/*ServiceImpl.java`
-- `backend/src/test/java/com/devflow/copilot/*Test.java`
+本报告引用前序已记录验收结果，本轮为文档汇总，不重新运行 `mvn test`、`npm run build` 或 Docker。
 
-### frontend
+当前记录的真实验收结果如下：
 
-- `frontend/src/types/domain.ts`
-- `frontend/src/api/http.ts`
-- `frontend/src/components/StatusTag.vue`
-- `frontend/src/views/WorkbenchView.vue`
-- `frontend/src/views/PromptTemplatesView.vue`
-- `frontend/src/views/GenerationHistoryView.vue`
+- 后端：`mvn test` 已通过，当前记录为 18 tests passed。
+- 前端：`npm run build` 已通过。
+- Docker Compose：`docker compose config` 已通过。
+- Docker runtime：`docker compose up --build` 已尝试，但失败原因是 Docker Hub `registry-1.docker.io` 镜像元数据请求 `i/o timeout`。
+- 因此不能写成 Docker Compose runtime 已完整部署成功。
 
-### docs
+## 四、P0 完成清单
 
-- `README.md`
-- `docs/architecture.md`
-- `docs/interview-ready-project-summary.md`
-- `docs/resume-bullets.md`
-- `docs/upgrade-acceptance-report.md`
-- `docs/final-acceptance-report.md`
+### P0-1：TODO.md 启动闭环
 
-### docker / ci
+P0-1 已完成：
 
-- `backend/Dockerfile`
-- `frontend/Dockerfile`
-- `frontend/nginx.conf`
-- `docker-compose.yml`
-- `.github/workflows/ci.yml`
-- `.dockerignore`
+- 根目录 `TODO.md` 已创建。
+- `AGENTS.md` -> `HANDOFF.md` -> `TODO.md` 启动流程闭环已补齐。
+- 后续每轮任务先读协作规则与交接文档，再处理一个名称明确、范围可验收的小任务。
 
-## 4. 功能完成情况
+### P0-2：ai_task 最小只读查询入口
 
-- [x] MyBatis-Plus 持久化
-- [x] H2/MySQL profile
-- [x] Flyway
-- [x] LLM Provider
-- [x] local-rule 降级
-- [x] Prompt 模板真实渲染
-- [x] 模板变量校验
-- [x] 模板版本记录
-- [x] 生成历史记录 provider/model/token/latency/error
-- [x] 状态机 `READY_FOR_REVIEW → SAVED → CONFIRMED`
-- [x] 非法状态流转拒绝
-- [x] DTO 校验
-- [x] 全局异常处理
-- [x] 后端测试
-- [x] 前端构建
-- [x] Docker Compose
-- [x] GitHub Actions
-- [x] 前端中文化和响应式收尾
+P0-2 已完成：
 
-## 5. 实际运行命令和结果
+- `ai_task` 已补最小只读查询入口。
+- 接口：`GET /api/tasks?projectId={projectId}`。
+- `projectId` 必填。
+- 缺失 `projectId` 返回 HTTP 400，统一错误结构 `code=4000`。
+- 返回 `ApiResponse<List<AiTask>>`。
+- 按 `id` 倒序返回指定项目的 `ai_task` 列表。
+- 不存在项目或无任务时返回空数组。
+- 没有新增、更新、删除接口。
+- 没有任务调度。
+- 没有异步执行。
+- 没有接入真实 LLM。
+- 没有改生成、日志分析、模板管理、历史记录主流程。
+- 没有改 `InMemoryStore`。
 
-### Git 状态
+## 五、P1 完成清单
 
-```text
-git status --short
-fatal: not a git repository (or any of the parent directories): .git
-```
+### P1-1：InMemoryStore demo-only / memory-demo 边界说明
 
-结论：当前目录不是 Git 仓库，无法输出 diff 统计；关键文件已逐项确认存在。
+P1-1 已完成：
 
-### 后端测试
+- `InMemoryStore.java` 已补 demo-only / `memory-demo` profile 边界 Javadoc。
+- `InMemoryStore` 仅用于 `memory-demo` / 无数据库轻量演示场景。
+- 它不是 dev/test/prod 默认主流程持久化方案。
+- 默认主流程使用 MyBatis-Plus + H2/MySQL。
+- 本任务只补注释，不改变业务逻辑。
 
-```text
-cd backend
-Maven: C:\Users\wangxun\AppData\Local\Temp\apache-maven-3.9.9\bin\mvn.cmd test
+### P1-2：README 简历版项目介绍
 
-Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
-```
+P1-2 已完成：
 
-覆盖点：Prompt 渲染成功、缺少变量时报错、local-rule 生成、OpenAI-compatible 缺 Key 降级、生成历史保存、Save Record、Mark Confirmed、非法状态流转、项目创建接口、参数校验失败、日志诊断规则、Mapper CRUD、模板版本记录。
+- `README.md` 已新增“简历版项目介绍”小节。
+- 小节位置在“项目定位”之后、“技术栈”之前。
+- 内容突出 Java 后端工程化能力，包括 Spring Boot 3、REST API、Controller -> Service -> Mapper 分层、MyBatis-Plus、Flyway、H2/MySQL Profile、统一响应、状态流转和后端测试。
+- 内容突出 AI Coding 工具链能力，包括 Prompt 模板、生成记录、人工确认、local-rule 演示生成链路和 OpenAI-compatible Provider 代码层适配。
+- 继续保持 `local-rule`、日志规则、tokenUsage、Docker runtime、`ai_task`、`InMemoryStore` 等边界清楚。
 
-### API 烟测
+## 六、项目边界说明
 
-使用 dev/H2 后端执行最小 API 闭环：
+当前项目边界需要继续保持以下口径：
 
-```text
-projectId=5
-templateId=1
-templateVersion=1
-recordId=8
-generatedStatus=READY_FOR_REVIEW
-historyStatus=READY_FOR_REVIEW
-savedStatus=SAVED
-confirmedStatus=CONFIRMED
-provider=local-rule
-model=local-rule-mvp
-latencyMs=0
-tokenUsage=171
-```
+- `local-rule` 是本地规则 / 模板生成，不是真实 LLM 推理。
+- OpenAI-compatible Provider 是代码层适配，当前仓库不提交真实 API Key，不写成真实模型稳定端到端验收。
+- 日志分析是关键词规则引擎，不是 AI 自动推理。
+- local-rule tokenUsage 是基于文本长度的估算值，不是真实 tokenizer。
+- Docker Compose config 已通过，但 runtime `up --build` 因 Docker Hub `i/o timeout` 未完整成功。
+- `ai_task` 是最小只读查询入口，不是完整任务系统。
+- `InMemoryStore` 仅用于 `memory-demo` / 无数据库轻量演示，不是默认 dev/test/prod 主流程持久化。
+- 项目无登录、无权限系统、无 RAG、无 SSE 流式输出、无生产级监控，不应包装成完整生产平台。
 
-异常路径：
+## 七、简历可写结论
 
-```text
-再次保存已确认记录：HTTP 409
-{"code":4094,"message":"非法状态流转：CONFIRMED -> SAVED，允许流转为 []","data":null}
+从大三 Java 后端实习角度，当前项目可以积极但克制地写入简历。
 
-空 projectName：HTTP 400
-{"code":4000,"message":"项目名称不能为空","data":null}
-```
+可以写：
 
-上一轮也已验证过重启后查询 `projectId=4`、`recordId=7` 成功，证明 dev 文件型 H2 数据跨进程保留。
+- Spring Boot 3 后端分层架构。
+- REST API 设计。
+- MyBatis-Plus 持久化。
+- Flyway 数据库迁移。
+- H2 / MySQL Profile。
+- Prompt 模板管理。
+- 生成记录状态流转。
+- 规则化日志诊断。
+- `ai_task` 最小只读查询 API。
+- 统一响应与错误处理。
+- 后端测试覆盖。
+- Vue 3 控制台前端。
+- AI 工具链工程化边界意识。
 
-### 前端构建
+不能写：
 
-```text
-cd frontend
-npm install
-up to date, audited 115 packages
-found 0 vulnerabilities
+- 完整生产级大模型平台。
+- 已稳定接入真实大模型。
+- AI 自动推理日志根因。
+- Docker Compose 已完整部署成功。
+- 完整任务调度系统。
+- 真实 tokenizer 统计。
 
-npm run build
-vue-tsc --noEmit && vite build
-✓ built in 6.51s
-```
+## 八、最终建议
 
-说明：Vite 输出 chunk 体积警告，不影响构建成功。后续可做路由级代码拆分。
-
-### Docker / CI 静态检查
-
-```text
-dockerAvailable=false
-composeHasBackend=true
-composeHasFrontend=true
-composeHasMysql=true
-backendDockerfile=true
-frontendDockerfile=true
-ciCheckout=true
-ciSetupJava=true
-ciSetupNode=true
-ciBackendVerify=true
-ciFrontendBuild=true
-```
-
-本机未安装 Docker，`docker compose config` 未执行；已完成 compose 文件静态检查。
-
-### 编码检查
-
-对包含中文的 md/txt/csv/json 文件执行 UTF-8 BOM 检查：
-
-```text
-checked=13
-missingBom=0
-```
-
-Windows PowerShell 5 不支持 `utf8BOM` 枚举名，本机使用 `Set-Content -Encoding UTF8`，该版本会写入 UTF-8 BOM，并已检查文件头 `EF BB BF`。
-
-## 6. 前端验收点
-
-- Workbench 展示模板选择、Provider、模型、Token、模板版本和状态。
-- PromptTemplatesView 已中文化，展示模板名称、类型、启用状态、变量、版本、更新时间和默认模板。
-- GenerationHistoryView 展示 provider、model、latency、token、模板名称/版本、失败原因、保存状态和确认状态。
-- 按钮状态符合状态机：`READY_FOR_REVIEW` 可保存，`SAVED` 可确认，`CONFIRMED` 和 `FAILED` 不显示错误操作。
-
-## 7. Docker 和 CI 说明
-
-Docker Compose 包含 `mysql`、`backend`、`frontend` 三个服务。backend 使用 `prod` profile 连接 MySQL，frontend 使用 Nginx 并代理 `/api` 到后端。
-
-GitHub Actions 包含 checkout、setup Java、setup Node、后端 `mvn -B verify`、前端 `npm ci` 和 `npm run build`。
-
-## 8. 剩余风险点
-
-- 本机未安装 Docker，未实际运行容器构建，只做了配置静态检查。
-- 未配置真实 LLM API Key，因此未对收费模型做端到端实盘调用；OpenAI-compatible 适配和缺 Key 降级已测试。
-- 未实现 SSE 流式输出，当前生成仍为同步请求。
-- 前端生产包存在体积警告，后续可做动态 import 和 Element Plus 按需拆分。
-- 当前无登录和权限控制，符合 MVP 边界，但如果公开部署需要补充认证。
-
-## 9. 面试时如何解释
-
-这个项目不是聊天套壳，重点是把 AI Coding 行为工程化：Prompt 模板渲染、Provider 选择与降级、生成历史持久化、Token/模型/延迟追踪、状态机和人工确认闭环。
-
-如果被问为什么默认 local-rule，可以解释：local-rule 用于无 Key 演示和故障降级，不冒充真实模型；系统已提供 OpenAI-compatible Provider，配置 API Key 后可走真实模型。
-
-如果被问为什么没有微服务、Redis、Kafka，可以解释：当前项目规模下单体分层更清晰，重点是 AI 生成链路和可追踪性，不为了堆技术增加复杂度。
-
-## 10. 简历推荐写法
-
-可写：
-
-> 独立开发 DevFlow Copilot AI Coding 工作流控制台，基于 Spring Boot 3、Vue 3 和 TypeScript 实现项目上下文、Java 日志诊断、Prompt 模板、生成历史及人工确认流程；抽象统一 LLM Provider，支持 OpenAI-compatible 调用与 local-rule 降级模式，并通过 MyBatis-Plus、Flyway、H2/MySQL、状态机和 15 个测试用例增强后端工程化能力。
-
-不要写：
-
-- 已实现 SSE 流式输出。
-- 已稳定接入某个真实模型平台。
-- 已实现自动代码修改、自动提交或 RAG。
-
-## 11. 需要手动做的事情
-
-1. 如需容器化演示，请安装 Docker Desktop 后运行 `docker compose up --build`。
-2. 如需真实模型演示，请配置 `DEVFLOW_AI_PROVIDER=openai-compatible` 和 `DEVFLOW_AI_API_KEY`。
-3. 如果要提交到远端仓库，请先初始化或进入正确 Git 仓库后提交本轮改动。
+- 当前 `resume-optimization-v1` 分支可以作为简历展示优化分支。
+- 后续如果继续优化，应每轮只做一个明确任务，避免把小任务扩展为全项目重构或继续堆功能。
+- 下一步建议可以是最终只读复核或准备合并回 `main`，但合并前必须再次确认 working tree clean 和测试状态。
+- 如果要补充更多演示材料或真实 LLM 验证，应作为后续单独任务处理，并继续保持 README / 简历表述不夸大。
