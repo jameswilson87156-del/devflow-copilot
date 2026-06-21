@@ -4,62 +4,48 @@
 
 ## 当前待处理交接
 
-### 本轮审查时间
+### 更新时间
 
-`YYYY-MM-DD HH:mm（时区）`
+`2026-06-21（Asia/Shanghai）`
 
-### 审查对象
+### 当前真实状态
 
-- TODO / 功能名称：
-- 审查文件或 Git 范围：
-- 审查者：Claude / Codex / 用户
+- 当前工作分支：`resume-optimization-v1`。
+- 最新已完成提交：
+  - `5908a7b docs: clarify resume README boundaries`
+  - `d5a4486 docs: add project TODO roadmap`
+  - `e38126c chore: avoid Docker compose port conflict`
+- P0-1 已完成：根目录 `TODO.md` 已创建，AGENTS.md 启动流程中的 TODO 读取闭环已补齐。
+- 后续每轮任务应先读 `AGENTS.md`、`HANDOFF.md`、`TODO.md`，每轮只做一个明确任务，校验通过后再 commit。
+- README.md 已完成边界澄清：不再把 Docker Compose runtime 写成完整部署成功；不再笼统写 `API smoke test passed`；已压实 `local-rule` 是本地规则/模板生成，不是真实 LLM 推理；已压实日志分析是关键词规则引擎，不是 AI 自动推理；已压实 local-rule tokenUsage 是文本长度估算，不是真实 tokenizer。
+- 项目仍适合作为大三 Java 后端实习简历项目基础，亮点应聚焦 Spring Boot 分层架构、MyBatis-Plus 持久化、Prompt 模板管理、生成记录状态流转、规则化日志诊断、Vue 3 控制台前端、后端测试和前端构建。
 
-### 发现的问题
+### Docker / Compose 当前状态
 
-#### 问题 1：[简短标题]
+- WSL Ubuntu-22.04 中 Docker Engine 可用。
+- Docker Engine：`29.1.3`。
+- Docker Compose Plugin：`v5.1.4`。
+- `docker compose config` 已通过。
+- 后端宿主默认端口已改为 `18080`，避免和现有 `sub2api` 的 `8080` 冲突；容器内部端口仍为 `8080`。
+- `docker compose up --build` 已尝试，但失败原因是 Docker Hub `registry-1.docker.io` 镜像元数据请求 `i/o timeout`。
+- 已执行 `docker compose down`，不带 `-v`；不应写成 Docker Compose runtime 已完整部署成功。
 
-- 文件/位置：
-- 证据或复现步骤：
-- 实际结果：
-- 预期结果：
-- 影响：
+### 下一轮建议任务
 
-### 严重程度
+> 一次只处理一个任务。
 
-`高 / 中 / 低`
+**只处理 P0-2：ai_task 空壳问题。**
 
-### 建议修改方式
-
-- 建议方案：
-- 不允许破坏的行为：
-- 允许修改的文件：
-
-### 交给 Codex 的修复任务
-
-> 一次只写一个明确修复任务。
-
-- 任务名称：
-- 目标：
-- 涉及文件：
-- 不在本轮处理：
-
-### 验收标准
-
-- [ ] 原问题可以复现，修复后不再出现。
-- [ ] 相关自动化测试、构建或手工验证已经实际执行。
-- [ ] 主流程没有回归。
-- [ ] 实际命令和结果已记录。
-- [ ] `TODO.md` 和本文件已更新。
+- 方案 A：补最小 `GET /api/tasks?projectId=` 接口，让 `ai_task` 表 / 实体 / Mapper 有可演示入口。
+- 方案 B：如果暂时不做功能，则在 `AiTaskMapper.java` 或相关文档中明确 `ai_task` 是扩展预留，避免 README / 面试表述误导。
+- 本轮不要顺手处理 `InMemoryStore`、README、Docker 或其他 P1/P2 项。
 
 ## Codex 修复结果
 
-- 修复时间：
-- 修改文件：
-- 修复说明：
-- 实际运行命令：
-- 实际结果：
-- 未运行的验证及原因：
-- 剩余风险：
+- `d5a4486 docs: add project TODO roadmap`：已创建根目录 `TODO.md`，P0-1 完成。
+- `5908a7b docs: clarify resume README boundaries`：已修正 README 简历表述和验收状态边界。
+- 剩余 P0：`ai_task` 表 / 实体 / Mapper 仍无 Service / Controller 或明确扩展预留说明。
+- 本次 HANDOFF 同步为纯文档状态更新，不代表业务代码变更。
 
 ## 历史记录
 
@@ -70,6 +56,16 @@
 - 验证证据：
 - 遗留问题：
 - 下一步：
+
+---
+
+### 2026-06-21 — Codex — HANDOFF 最新状态同步
+
+- 做了什么：同步最新提交 `d5a4486`、`5908a7b` 和 Docker Compose 当前真实状态；标记 P0-1 已完成；记录 README 边界澄清已完成；明确下一轮只处理 P0-2 ai_task 空壳问题。
+- 修改文件：`HANDOFF.md`
+- 验证证据：本轮仅文档同步；修改后应执行 `git diff -- HANDOFF.md`、`git diff --check -- HANDOFF.md`、`git status --short`。
+- 遗留问题：`ai_task` 表 / 实体 / Mapper 仍无 Service / Controller 或明确扩展预留说明；`InMemoryStore` 仍建议后续补 demo-only Javadoc。
+- 下一步：只处理 P0-2 ai_task 空壳问题，二选一实现最小接口或标注扩展预留。
 
 ---
 
@@ -100,7 +96,7 @@
 - DTO 校验（`@Valid`）+ GlobalExceptionHandler 统一 ApiResponse 返回
 - 15 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试（`@Transactional` 回滚隔离）
 - Vue 3 + TypeScript + Element Plus 前端，WorkbenchView 三栏布局，状态机按钮联动
-- Docker Compose（backend / frontend / mysql 三服务）+ GitHub Actions CI 配置文件存在
+- Docker Compose（backend / frontend / mysql 三服务）配置存在，`docker compose config` 已通过；runtime `up --build` 因 Docker Hub 超时未完整成功；GitHub Actions CI 配置文件存在
 
 #### 不能夸大的能力
 
@@ -110,20 +106,18 @@
 - **不能写**"AI 智能日志分析" —— 日志诊断是关键词规则引擎（8种异常类型硬编码），不是 LLM 推理
 - **不能写**"毫秒级 latency 追踪" —— local-rule 的 costTimeMs 实测约为 0–1ms，不代表 LLM 网络延迟
 - **不能写**"SSE 流式输出" —— 当前是同步请求，无 SSE
-- **不能写**"Docker Compose 已验证部署" —— CI 和 Compose 文件存在，但未实际执行 `docker compose up --build`（本机 Docker 不可用，final-acceptance-report 有记录）
+- **不能写**"Docker Compose 已验证部署" 或 "完整容器化部署成功" —— WSL Docker Engine 和 Compose Plugin 当前可用，`docker compose config` 已通过，`docker compose up --build` 已尝试但失败于 Docker Hub `registry-1.docker.io` 镜像元数据请求 `i/o timeout`，runtime smoke test 尚未完整完成
 
 ---
 
 #### 当前 P0 问题
 
-**P0-1：TODO.md 不存在**
+**P0-1：TODO.md 不存在（已完成）**
 
-- 文件/位置：项目根目录（无此文件）
-- 证据：`Glob("TODO.md")` 未找到任何匹配，但 AGENTS.md 第1条明确要求"开始工作前必须读取 TODO.md"
-- 影响：文档自相矛盾；Codex 执行任何任务前按规则会先读取该文件，文件缺失导致上下文断裂
-- 严重程度：中
-- 建议：新建 `TODO.md`，列出已完成功能和当前待处理项
-- 验收：`TODO.md` 存在，内容与项目现状一致；AGENTS.md 读取流程可正常走通
+- 状态：已完成，提交 `d5a4486 docs: add project TODO roadmap`。
+- 当前结果：根目录 `TODO.md` 已创建，记录已完成能力、不能夸大的能力、P0/P1/P2 待办和下一轮建议。
+- AGENTS.md 启动流程闭环：后续每轮任务应先读 `AGENTS.md`、`HANDOFF.md`、`TODO.md`。
+- 当前不再把 TODO 缺失列为 P0；剩余 P0 为 `ai_task` 空壳问题。
 
 **P0-2：ai_task 表和 Mapper 无对应 Service / Controller**
 
@@ -146,21 +140,16 @@
 - 建议：在类头 Javadoc 注释中标注"演示/备份用途，主存储已切换为 MyBatis-Plus + H2/MySQL，该类仅在 memory-demo profile 下激活"；或整理到 `legacy/` 子包
 - 验收：阅读代码不产生歧义
 
-**P1-2：README 未说明 token 估算方式**
+**P1-2：README 未说明 token 估算方式（已完成）**
 
-- 文件/位置：README.md "核心亮点" 和"生成历史"功能描述
-- 证据：`LocalRuleGenerationProvider.estimateTokens()` = `text.length() / 3.5`，不是真实 tokenizer
-- 影响：面试官问"你们怎么统计 token"时，若不主动说明会造成误解
-- 建议：在 README 相关位置加一句"local-rule 模式下 token 为按字符数估算（length / 3.5），非真实 tokenizer；OpenAI-compatible 模式下使用 API 返回的真实 usage 字段"
-- 验收：README 描述与 `LocalRuleGenerationProvider` 实现一致
+- 状态：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
+- 当前结果：README 已说明 local-rule 模式下 tokenUsage 是基于文本长度的估算值，不是真实 tokenizer；OpenAI-compatible 模式下只有 provider 返回 `usage` 字段时才可记录真实 usage。
 
-**P1-3：local-rule 生成内容性质未在文档中说清楚**
+**P1-3：local-rule 生成内容性质未在文档中说清楚（已完成）**
 
-- 文件/位置：README.md、docs/interview-guide.md
-- 证据：local-rule 生成的 commit message 固定为 `feat(devflow): improve AI generation workflow`，需求拆解也是预置模板套语，不是 LLM 推理结果
-- 影响：面试时若被问"AI 能生成什么"，演示后对方会看出输出是模板，若没有预期管理会造成负面印象
-- 建议：在 README 的"LLM Provider 配置"或"核心功能"段落补充一句"默认 local-rule 模式生成结构化模板内容用于工程演示；接入真实模型需配置 OpenAI-compatible Provider"；interview-guide.md 已有相关 Q&A，可保持不变
-- 验收：文档能引导面试官正确理解两种模式的区别
+- 状态：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
+- 当前结果：README 已明确 `local-rule` 是本地规则/模板生成，不是真实 LLM 推理；OpenAI-compatible Provider 是代码层适配，当前仓库不提交真实 API Key，也不把真实模型端到端调用写成已稳定验收。
+- 同步结果：README 也已压实日志分析是关键词规则引擎，不是 AI 自动推理；已修正 Docker Compose runtime 状态和 `API smoke test passed` 的笼统表述。
 
 **P1-4：HANDOFF.md 原为空白模板，无实际审查记录**
 
@@ -184,10 +173,12 @@
 - 当前状态：只有 `npm run build` 通过，无 Vitest / Vue Test Utils 测试
 - 建议：为 StatusTag 组件或 WorkbenchView 核心计算属性添加 1–2 个 Vitest 测试
 
-**P2-3：Docker Compose 未实际运行验证**
+**P2-3：Docker Compose runtime 未完整成功**
 
-- 当前状态：Compose 文件静态校验通过，但 `docker compose up --build` 未在有 Docker 的环境执行
-- 建议：在可用 Docker 环境中实际跑一遍，把输出记录进 HANDOFF.md
+- 当前状态：WSL Ubuntu-22.04 Docker Engine `29.1.3` 可用，Docker Compose Plugin `v5.1.4` 可用；`docker compose config` 已通过；后端宿主默认端口已改为 `18080` 避让 `sub2api` 的 `8080`。
+- 已尝试：`docker compose up --build` 已执行，但失败原因是 Docker Hub `registry-1.docker.io` 镜像元数据请求 `i/o timeout`；后端/前端容器未创建，runtime smoke test 未完整完成。
+- 已清理：已执行 `docker compose down`，不带 `-v`。
+- 建议：待 Docker Hub 网络恢复或基础镜像可用后，重新执行 runtime smoke test；未成功前不得写成 Docker Compose 已完整部署成功。
 
 **P2-4：缺少动态演示材料**
 
@@ -200,16 +191,17 @@
 
 > 规则：每次只处理一个任务，完成后回写"Codex 修复结果"再开始下一个。
 
-**任务1：创建或完善 TODO.md**
+**任务1：创建或完善 TODO.md（已完成）**
 
 - 目标：在项目根目录创建 `TODO.md`，记录已完成功能和当前待处理项
+- 完成提交：`d5a4486 docs: add project TODO roadmap`
 - 涉及文件：`TODO.md`（新建）
 - 不能破坏：其他任何文件不做改动
 - 不在本轮处理：其他 P0/P1 问题
 - 验收方式：
-  - [ ] `TODO.md` 文件存在于项目根目录
-  - [ ] 文件内容列出"已完成"与"待处理"两个分区，内容与项目实际现状一致
-  - [ ] AGENTS.md 描述的"启动前读取 TODO.md"流程可正常执行
+  - [x] `TODO.md` 文件存在于项目根目录
+  - [x] 文件内容列出"已完成"与"待处理"两个分区，内容与项目实际现状一致
+  - [x] AGENTS.md 描述的"启动前读取 TODO.md"流程可正常执行
 
 **任务2：处理 ai_task 空壳问题**
 
@@ -223,16 +215,17 @@
   - [ ] 若选方案B：AiTaskMapper.java 有 Javadoc 注释说明其用途
   - [ ] 面试时对"这个 Mapper 是干嘛的"有完整答案
 
-**任务3：补充 README 中 token 估算和 local-rule 说明**
+**任务3：补充 README 中 token 估算和 local-rule 说明（已完成）**
 
 - 目标：在 README.md 相关段落补充两句话：(1) local-rule token 是字符数估算；(2) local-rule 生成的是结构化模板内容，非 LLM 推理
+- 完成提交：`5908a7b docs: clarify resume README boundaries`
 - 涉及文件：`README.md`
 - 不能破坏：README 整体结构和其他内容保持不变
 - 不在本轮处理：其他文档修改
 - 验收方式：
-  - [ ] README 中出现对 token 估算方式的准确说明
-  - [ ] README 中出现对 local-rule 内容性质的准确说明
-  - [ ] 不引入任何夸大或虚构的功能描述
+  - [x] README 中出现对 token 估算方式的准确说明
+  - [x] README 中出现对 local-rule 内容性质的准确说明
+  - [x] 不引入任何夸大或虚构的功能描述
 
 **任务4：整理 InMemoryStore 的 demo-only 说明**
 
@@ -247,14 +240,10 @@
 
 ---
 
-#### Codex 修复结果（待填写）
+#### Codex 修复结果（已同步）
 
-任务1 完成后在此补充：
-
-- 修复时间：
-- 修改文件：
-- 实际运行命令：
-- 实际结果：
-- 未验证内容：
-- 剩余风险：
-
+- P0-1 / 任务1：已完成，提交 `d5a4486 docs: add project TODO roadmap`。
+- README 边界澄清 / 任务3：已完成，提交 `5908a7b docs: clarify resume README boundaries`。
+- Docker Compose 端口避让：已完成配置修改，提交 `e38126c chore: avoid Docker compose port conflict`；runtime `up --build` 未完整成功，原因是 Docker Hub 镜像元数据请求 `i/o timeout`。
+- 当前剩余优先任务：P0-2 `ai_task` 空壳问题。
+- 本条同步仅更新交接信息，不代表本轮修改业务代码。
