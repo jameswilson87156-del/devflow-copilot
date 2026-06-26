@@ -2,6 +2,15 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - 前端 UI 中文版重构前审查
+
+- 做了什么：按附件要求先审查，不直接大改。已阅读 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`README.md`、`docs/real-provider-verification.md`、`docs/resume-evidence.md`、`docs/api.md`、`docs/architecture.md`、根目录 `DESIGN.md`，并检查前端路由、API 封装、类型、布局、页面和截图脚本。
+- 参考图：已查看 `docs/design/references/01-dashboard-ai-concept-cn.png` 至 `05-prompt-studio-ai-concept-cn.png`。该目录当前为未跟踪新增内容，且 `docs/design/references/README.md` 已声明这些图片是 AI-generated UI concept images，不是真实运行截图。
+- 当前前端状态：真实接口基础完整，Dashboard 使用 stats/log/prompts，Workbench 使用生成、保存、确认接口，Prompt Studio 使用 prompt CRUD 和试运行生成接口，Agent Run Trace 使用真实 run/trace 接口，Knowledge Base 使用文档、chunk 和关键词检索接口。截图脚本 `scripts/capture-portfolio-screenshots.mjs` 会预热安全 demo 数据并输出真实浏览器截图到 `docs/images/`。
+- 现有改动保护：审查开始前工作区已有 `frontend/src/views/AgentRunTraceView.vue` 大量未提交视觉改动，以及未跟踪的 `docs/design/` 参考图目录；本轮不回滚、不覆盖这些改动。
+- 最小后续计划：先统一导航中文结构和全局设计 token/公共组件，再按 Dashboard -> Workbench -> Agent Run Trace -> Knowledge Base -> Prompt Studio 的顺序分阶段改造；每页继续使用真实接口，缺字段只做集中 fallback，并明确展示数据来源。
+- 验证证据：`frontend` 目录执行 `npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。`git diff --check` 退出码 0，仅有 LF/CRLF 提示；敏感词扫描只命中文档占位符，没有真实 API Key。后端本轮未修改，未运行 `mvn test`。
+
 ## 2026-06-26 - Codex - 真实 OpenAI-compatible Provider 最小验证
 
 - 做了什么：在不读取、不打印、不要求用户提供 API Key 的前提下，验证本机已运行后端 `http://127.0.0.1:8080`。`GET /api/dashboard/stats` 返回 HTTP 200；`POST /api/ai/requirement-split` 用最短 Prompt 完成一次真实 Provider 请求。

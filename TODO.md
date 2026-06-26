@@ -244,6 +244,25 @@
   - Knowledge Base 仍是关键词/简单相似度检索。
 - 验收：本轮运行 `mvn test`、`npm run build`、`git diff --check`、截图存在性检查和敏感文件/密钥检查。
 
+## P1-7：前端 UI 中文版重构前审查与分阶段计划 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户提供 5 张 AI-generated 中文 UI concept images，要求先审查现有真实前端、接口、截图脚本和风险，不要立刻大改。
+- 涉及文件：审查 `frontend/src` 页面、路由、API、类型、布局和样式，审查 `scripts/capture-portfolio-screenshots.mjs`、README 和相关 docs；本轮仅写回 `TODO.md`、`HANDOFF.md`。
+- 审查结论：
+  - 当前前端已具备真实接口闭环，不是静态概念图。
+  - `docs/design/references/` 是 AI 视觉参考，不是运行截图；真实截图仍应来自 `docs/images/`。
+  - 工作区已有未提交的 `AgentRunTraceView.vue` 视觉改动和未跟踪 `docs/design/`，后续修改必须保留并基于现状继续。
+  - 参考图目标比现有页面更完整，不能一次性把五页重构混成一个不可验收大任务。
+- 最小后续任务建议：
+  1. 先统一导航中文结构、全局设计 token 和公共组件骨架。
+  2. 单独改造 Dashboard，并重新生成真实截图。
+  3. 单独改造 Workbench，并重新生成真实截图。
+  4. 单独补强 Agent Run Trace 的底部 Tool Call / JSON / 状态历史 / 日志区域。
+  5. 单独补强 Knowledge Base 和 Prompt Studio 的详情、历史和右侧预览区域。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。后端本轮未修改，未运行 `mvn test`。
+- 建议 commit message：`docs: record frontend ui redesign audit`
+
 ## 下一轮建议
 
-优先做真实 OpenAI-compatible Provider 的一次手动端到端验证：由用户在本地 shell 配置低成本兼容服务的 API Key，跑一次最小生成请求，确认响应中的 provider/model/token/trace 字段，再把不含敏感信息的验证摘要补进 `docs/real-provider-verification.md`。
+优先做“统一导航中文结构、全局设计 token 和公共组件骨架”，只覆盖 shell / nav / token / 基础组件，不同时重构五个页面。下一轮仍需保留当前未提交的 `AgentRunTraceView.vue` 和 `docs/design/` 内容，不回滚、不覆盖用户已有改动。
