@@ -2,6 +2,16 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - 前端设计系统第一阶段地基
+
+- 做了什么：只做前端基础设施，不改后端、不新增接口、不重构 5 个页面。先审查 router、layout、components、views、api、types、theme.css 和 5 张 `docs/design/references/` AI concept images，然后落地设计系统地基。
+- 导航：`frontend/src/router/index.ts` 的导航文案统一为中文分组：工作流、可观测性、知识与引用、治理与审核、配置。已有真实路由继续保留；`工具调用`、`人工审核`、`Provider`、`设置` 作为 disabled 导航项，不创建假页面。
+- Tokens：全局 design tokens 集中在 `frontend/src/styles/theme.css`，覆盖深色背景、卡片背景、蓝紫主色、成功/待审核/失败/运行中状态色、文本色、圆角、阴影、间距、字号、sidebar 宽度和 topbar 高度。
+- 组件：新增 `SidebarNav.vue`、`TopBar.vue`、`MetricCard.vue`、`SectionCard.vue`、`StatusBadge.vue`、`ProviderBadge.vue`、`CodeBlock.vue`。本轮只把 `SidebarNav` / `TopBar` 接入 `DevFlowLayout`，把 `MetricCard` / `SectionCard` 轻量接入 `DashboardView`。
+- 保留边界：未改 `WorkbenchView`、`AgentRunTraceView`、`KnowledgeBaseView`、`PromptTemplatesView` 的业务结构；未新增假接口；未把 `docs/design/references/` 当真实截图；未提交 API Key。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。`git diff --check` 退出码 0，仅有 LF/CRLF 提示；敏感内容扫描只命中文档占位符，没有真实 API Key。后端本轮未修改，未运行 `mvn test`。
+- 下一步：建议下一轮只重构 Dashboard，对齐 `01-dashboard-ai-concept-cn.png` 的 Hero、KPI、运行、Prompt、Trace、Provider、Knowledge、Tool Call 和 Human Review 信息层级。
+
 ## 2026-06-26 - Codex - 前端 UI 中文版重构前审查
 
 - 做了什么：按附件要求先审查，不直接大改。已阅读 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`README.md`、`docs/real-provider-verification.md`、`docs/resume-evidence.md`、`docs/api.md`、`docs/architecture.md`、根目录 `DESIGN.md`，并检查前端路由、API 封装、类型、布局、页面和截图脚本。

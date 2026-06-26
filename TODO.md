@@ -263,6 +263,25 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。后端本轮未修改，未运行 `mvn test`。
 - 建议 commit message：`docs: record frontend ui redesign audit`
 
+## P1-8：前端设计系统第一阶段地基 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：在不一次重构 5 个页面的前提下，为 DevFlow Copilot 中文版 AI SaaS 控制台建立低风险前端设计系统地基。
+- 涉及文件：`frontend/src/router/index.ts`、`frontend/src/layouts/DevFlowLayout.vue`、`frontend/src/styles/theme.css`、`frontend/src/views/DashboardView.vue`、`frontend/src/components/*.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 左侧导航统一为中文分组结构，包含工作流、可观测性、知识与引用、治理与审核、配置。
+  - 保留已有真实路由；未实现独立页面的 `工具调用`、`人工审核`、`Provider`、`设置` 以 disabled 导航项展示，不新增假页面。
+  - 全局 design tokens 统一放在 `frontend/src/styles/theme.css`，包含深色背景、卡片背景、蓝紫主色、状态色、文本色、间距、字号、圆角、阴影、sidebar 宽度和 topbar 高度。
+  - 新增公共组件骨架：`SidebarNav`、`TopBar`、`MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`。
+  - `DevFlowLayout` 接入 `SidebarNav` 和 `TopBar`；`DashboardView` 轻量接入 `MetricCard` 和 `SectionCard`。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。
+  - 未把 `docs/design/references/` 的 AI 概念图当作真实截图。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: add devflow frontend design system foundation`
+
 ## 下一轮建议
 
-优先做“统一导航中文结构、全局设计 token 和公共组件骨架”，只覆盖 shell / nav / token / 基础组件，不同时重构五个页面。下一轮仍需保留当前未提交的 `AgentRunTraceView.vue` 和 `docs/design/` 内容，不回滚、不覆盖用户已有改动。
+优先单独重构 Dashboard，让仪表盘对齐 `docs/design/references/01-dashboard-ai-concept-cn.png` 的 Hero、六项 KPI、最近运行、Prompt 模板、工作流概览、活动时间线、Provider 健康、人工审核、知识引用和高频工具模块。下一轮仍不要同时重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。

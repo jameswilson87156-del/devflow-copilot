@@ -3,6 +3,8 @@ import { computed, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Plus } from '@element-plus/icons-vue'
 import { fetchDashboardStats, fetchLogHistory, fetchPrompts } from '@/api/devflow'
+import MetricCard from '@/components/MetricCard.vue'
+import SectionCard from '@/components/SectionCard.vue'
 import type { DashboardStats, GenerationRecord, LogAnalysis, PromptTemplate } from '@/types/domain'
 
 const router = useRouter()
@@ -31,11 +33,11 @@ const enabledPromptCount = computed(() => promptTemplates.value.filter((template
 const disabledPromptCount = computed(() => Math.max(promptTemplates.value.length - enabledPromptCount.value, 0))
 
 const metricItems = computed(() => [
-  { label: '今日运行数', value: stats.value.todayGenerationCount, code: 'Runs', tone: 'accent' },
-  { label: '成功率', value: `${stats.value.successRate || 0}%`, code: 'Success', tone: 'accent' },
-  { label: '人工确认数', value: stats.value.humanReviewCount || reviewQueue.value.length, code: 'Review', tone: 'warning' },
-  { label: '平均耗时', value: `${stats.value.averageLatencyMs || 0}ms`, code: 'Latency', tone: 'info' },
-  { label: 'Agent Run 数', value: stats.value.agentRunCount || 0, code: 'Agent Run', tone: 'accent' },
+  { label: '今日运行数', value: stats.value.todayGenerationCount, code: 'Runs', tone: 'accent' as const },
+  { label: '成功率', value: `${stats.value.successRate || 0}%`, code: 'Success', tone: 'success' as const },
+  { label: '人工确认数', value: stats.value.humanReviewCount || reviewQueue.value.length, code: 'Review', tone: 'warning' as const },
+  { label: '平均耗时', value: `${stats.value.averageLatencyMs || 0}ms`, code: 'Latency', tone: 'running' as const },
+  { label: 'Agent Run 数', value: stats.value.agentRunCount || 0, code: 'Agent Run', tone: 'accent' as const },
 ])
 
 const workflowCards = [
@@ -158,11 +160,14 @@ onMounted(loadDashboard)
     </header>
 
     <section class="status-strip" aria-label="工作流状态">
-      <article v-for="item in metricItems" :key="item.code" class="status-cell" :data-tone="item.tone">
-        <span class="mono">{{ item.code }}</span>
-        <strong>{{ item.value }}</strong>
-        <small>{{ item.label }}</small>
-      </article>
+      <MetricCard
+        v-for="item in metricItems"
+        :key="item.code"
+        :code="item.code"
+        :label="item.label"
+        :tone="item.tone"
+        :value="item.value"
+      />
     </section>
 
     <section class="workflow-spine" aria-label="AI 编码主流程">
@@ -288,13 +293,7 @@ onMounted(loadDashboard)
     </main>
 
     <section class="insight-grid">
-      <article class="workspace-pane insight-card">
-        <header class="insight-header">
-          <div>
-            <h3>生成类型分布</h3>
-            <p class="mono">Artifact Type Mix</p>
-          </div>
-        </header>
+      <SectionCard class="insight-card" title="生成类型分布" eyebrow="Artifact Type Mix" compact>
         <div class="distribution-list">
           <div v-if="!typeDistribution.length" class="mini-empty">暂无类型分布</div>
           <div v-for="item in typeDistribution" :key="item.type" class="distribution-row">
@@ -303,31 +302,21 @@ onMounted(loadDashboard)
             <strong class="mono">{{ item.count }}</strong>
           </div>
         </div>
-      </article>
+      </SectionCard>
 
-      <article class="workspace-pane insight-card">
-        <header class="insight-header">
-          <div>
-            <h3>Prompt 模板启用状态</h3>
-            <p class="mono">Reusable Prompt Orchestration</p>
-          </div>
-        </header>
+      <SectionCard class="insight-card" title="Prompt 模板启用状态" eyebrow="Reusable Prompt Orchestration" compact>
         <div class="prompt-status-grid">
           <div v-for="item in promptStatusItems" :key="item.label" :data-tone="item.tone">
             <strong>{{ item.value }}</strong>
             <span>{{ item.label }}</span>
           </div>
         </div>
-      </article>
+      </SectionCard>
 
-      <article class="workspace-pane insight-card wide">
-        <header class="insight-header">
-          <div>
-            <h3>最近 Artifact 记录</h3>
-            <p class="mono">Reviewable Outputs</p>
-          </div>
+      <SectionCard class="insight-card wide" title="最近 Artifact 记录" eyebrow="Reviewable Outputs" compact>
+        <template #actions>
           <span class="mono summary-note">已确认 {{ confirmedCount }} · 已保存 {{ savedCount }} · 失败 {{ failedCount }}</span>
-        </header>
+        </template>
         <div class="artifact-grid">
           <button v-for="record in artifactRecords" :key="record.id" type="button" @click="openRecord(record)">
             <span class="trace-node" :class="statusClass(record)" aria-hidden="true"></span>
@@ -335,7 +324,7 @@ onMounted(loadDashboard)
             <small>{{ formatType(record.generationType) }} · {{ statusText(record) }}</small>
           </button>
         </div>
-      </article>
+      </SectionCard>
     </section>
   </div>
 </template>
