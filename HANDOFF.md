@@ -2,6 +2,18 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Knowledge Base 高保真中文版重构
+
+- 做了什么：只重构 Knowledge Base，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Prompt Studio。基于 `docs/design/references/04-knowledge-base-ai-concept-cn.png` 的三栏知识管理结构，把 `KnowledgeBaseView.vue` 改成左文档列表、中详情与 Chunk、右检索结果与审核、底部可观测性的真实 RAG 引用管理页。
+- 页面内容：顶部展示 `文档 -> Chunk -> 检索 -> 引用 -> 生成 -> Trace` 链路；左侧包含搜索、新增文档、来源筛选、状态筛选和文档列表；中间包含文档详情、Chunk 切片、命中结果、检索时间线、文档信息、访问控制和关键词检索；右侧包含检索结果详情、引用预览、生成使用情况、关联 Agent Run 和知识发布审核空状态；底部包含检索历史、引用历史、生成知识引用和索引日志。
+- 保留真实功能：保留新增知识文档并后端切片、加载知识文档、加载文档 Chunk、关键词 / 简单相似度检索；文档选择后会刷新真实 Chunk 并用当前 query 重新检索。
+- 使用真实接口：`GET /api/knowledge/documents`、`POST /api/knowledge/documents`、`GET /api/knowledge/documents/{id}/chunks`、`POST /api/knowledge/search`、`GET /api/knowledge/references?generationRecordId={id}`、`GET /api/generations`、`GET /api/agent-runs?generationRecordId={id}`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`、`MetricCard`。本轮没有新增公共组件。
+- fallback / 派生边界：后端未提供文档发布状态、Chunk Token 数、检索日志持久化、索引耗时、知识发布审核人 / 意见、Trace ID 字段；页面从 `metadata status`、`chunkCount`、真实 generation references 和 Agent Run 记录安全派生，缺失时显示 `未记录`、`未关联 Trace` 或空状态。`embeddingModel / embeddingVector` 仅作为扩展点展示，没有写成向量数据库已启用。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Knowledge Base 路径仍是 `/knowledge`，等待选择器 `.knowledge-page` 仍存在，本轮无需调整。未重新生成 `docs/images/` 作品集截图；后续建议统一截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。使用本机 Chrome 对 `http://127.0.0.1:5174/knowledge` 做过 DOM 烟测，确认标题、左侧、中间、右侧和底部区域存在；临时验证截图已删除，没有纳入本轮变更。
+- 下一步：建议二选一：先做统一截图任务重新生成 Dashboard / Workbench / Knowledge Base 等真实运行截图，或单独做 Prompt Studio 高保真中文版重构；仍不要同时重构多个页面。
+
 ## 2026-06-26 - Codex - Workbench 高保真中文版重构
 
 - 做了什么：只重构 Workbench，不改后端、不新增接口、不改 Dashboard、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/02-workbench-ai-concept-cn.png` 的三栏工作台结构，把 `WorkbenchView.vue` 改成左任务配置、中生成结果、右执行详情、底部追踪与日志的真实 AI Coding 工作台。

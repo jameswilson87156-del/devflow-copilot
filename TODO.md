@@ -355,6 +355,38 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
 - 建议 commit message：`feat: redesign workbench with devflow design system`
 
+## P1-11：Knowledge Base 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/04-knowledge-base-ai-concept-cn.png`，只重构 Knowledge Base，不改后端、不改 Dashboard、Workbench、Agent Run Trace、Prompt Studio。
+- 涉及文件：`frontend/src/views/KnowledgeBaseView.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Knowledge Base 改为左侧文档列表、中间文档详情与 Chunk 切片、右侧检索结果详情与审核状态、底部检索历史 / 引用历史 / 生成知识引用 / 索引日志的高密度知识引用工作台。
+  - 顶部明确展示 `文档 -> Chunk -> 检索 -> 引用 -> 生成 -> Trace` 链路，不做普通文档列表页。
+  - 左侧保留搜索框、新增文档按钮、来源筛选、状态筛选和真实文档列表；文档选择后会重新加载真实 Chunk 并触发当前关键词检索。
+  - 中间保留创建知识文档、加载文档 Chunk、关键词检索等真实功能；新增 Chunk 切片、命中结果、检索时间线、文档信息、访问控制分区。
+  - 右侧展示当前命中 Chunk 的查询、来源、score、引用预览、生成使用情况和关联 Agent Run；没有 Trace / 审核记录时显示 `未关联 Trace`、`暂无知识发布审核记录`。
+  - 底部可观测性区域展示本页会话检索历史、真实 `generation_knowledge_reference` 引用历史、按 Generation Record 聚合的知识引用和由文档 / Chunk 状态派生的索引记录。
+- 保留真实功能：
+  - `GET /api/knowledge/documents` 文档列表。
+  - `POST /api/knowledge/documents` 新增文档并由后端切片。
+  - `GET /api/knowledge/documents/{id}/chunks` 真实 Chunk 列表。
+  - `POST /api/knowledge/search` 关键词 / 简单相似度检索。
+  - `GET /api/knowledge/references?generationRecordId={id}` 生成知识引用记录。
+- 额外使用真实接口：
+  - `GET /api/generations` 用于采样最近 Generation Record。
+  - `GET /api/agent-runs?generationRecordId={id}` 用于在引用历史中显示可关联的 Agent Run。
+- fallback / 派生说明：
+  - 后端未提供文档发布状态字段；状态优先从 `metadata status` 读取，否则按 `chunkCount > 0` 安全派生为 `已索引`，缺失时显示 `草稿 / 待审核`。
+  - 后端未提供 Chunk Token 数、最近使用、检索日志持久化、索引耗时、知识发布审核人或审核意见；页面显示 `未记录` 或空状态，不伪造。
+  - `embeddingModel / embeddingVector` 仅展示为预留扩展点；页面文案保持 `关键词检索 / RAG 引用`，没有写成向量数据库已启用。
+  - 引用使用次数、首次 / 最近使用时间只从已读取的真实 generation knowledge references 派生，未命中时显示未记录。
+- 截图脚本：
+  - `scripts/capture-portfolio-screenshots.mjs` 的 Knowledge Base 路径仍是 `/knowledge`，等待选择器 `.knowledge-page` 仍存在，本轮不需要调整脚本。
+  - 本轮未重新生成 `docs/images/` 作品集截图；建议后续统一截图任务执行。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。使用本机 Chrome 对 `/knowledge` 做过 DOM 烟测，左/中/右/底部四区渲染存在；临时验证截图已删除，未纳入本轮变更。
+- 建议 commit message：`feat: redesign knowledge base with devflow design system`
+
 ## 下一轮建议
 
-建议下一轮二选一：优先做统一截图任务，重新生成 Dashboard / Workbench 等真实运行截图；或单独重构 Knowledge Base，对齐 `docs/design/references/04-knowledge-base-ai-concept-cn.png`。下一轮仍不要同时重构 Agent Run Trace、Knowledge Base、Prompt Studio 多个页面。
+建议下一轮二选一：优先做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base 等真实运行截图；或单独做 Prompt Studio 高保真重构，对齐 `docs/design/references/05-prompt-studio-ai-concept-cn.png`。下一轮仍不要同时重构多个页面。
