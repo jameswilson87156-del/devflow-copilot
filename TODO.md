@@ -387,6 +387,39 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。使用本机 Chrome 对 `/knowledge` 做过 DOM 烟测，左/中/右/底部四区渲染存在；临时验证截图已删除，未纳入本轮变更。
 - 建议 commit message：`feat: redesign knowledge base with devflow design system`
 
+## P1-12：Prompt Studio 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/05-prompt-studio-ai-concept-cn.png`，只重构 Prompt Studio，不改后端、不新增假接口、不改 Dashboard、Workbench、Agent Run Trace、Knowledge Base。
+- 涉及文件：`frontend/src/views/PromptTemplatesView.vue`、`scripts/capture-portfolio-screenshots.mjs`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Prompt Studio 改为左侧 Prompt 模板列表、中间 Prompt 编辑器与渲染预览、右侧测试运行预览与执行详情、底部版本历史 / 测试结果 / Prompt 校验 / 最近运行 / 变更记录。
+  - 顶部明确展示 `Prompt 模板 -> 变量配置 -> 渲染预览 -> 测试运行 -> Trace / Human Review` 链路，不做普通文本编辑器或 CRUD 列表。
+  - 左侧保留搜索、新建模板、类型筛选、状态筛选和真实模板列表；使用次数和最近运行从真实 generation records 派生，缺失时显示未记录。
+  - 中间保留模板名称、Key、类型、版本、启用 / 默认状态、模板内容、variables 字段、保存模板、保存版本和运行测试；使用 `CodeBlock` 展示 System/User Prompt 派生预览、渲染后 Prompt 和 JSON 预览。
+  - 右侧展示真实试运行状态、耗时、Trace ID、Provider、Model、Token、原始响应、查看 Generation Trace 和 Human Review 状态；缺失时显示空状态。
+  - 底部 Prompt 校验只做前端静态校验：内容非空、变量占位符、必填变量覆盖、长度阈值、敏感占位符；不包装成 PromptOps、LLM-as-Judge 或自动评测后端能力。
+- 保留真实功能：
+  - `GET /api/prompts` 模板列表。
+  - `POST /api/prompts` 新建模板。
+  - `PUT /api/prompts/{id}` 保存模板；后端 update 会递增当前 `version`。
+  - `POST /api/ai/{type}` 试运行支持已有 `requirement-split`、`code-plan`、`readme-generate`、`commit-message`、`fix-prompt` 类型。
+- 额外使用真实接口：
+  - `GET /api/projects` 用于测试项目和变量示例。
+  - `GET /api/generations` 用于模板使用次数、最近运行和测试结果历史。
+  - `GET /api/generation-traces?generationRecordId={id}` 用于 Trace ID、Provider、Model、耗时等可观测字段。
+  - `GET /api/agent-runs?generationRecordId={id}` 与 `GET /api/agent-runs/{id}/trace` 用于关联 Agent Run 与 Human Review。
+- fallback / 派生说明：
+  - 后端没有独立版本历史表、PromptOps 评测表、单独 Prompt 校验记录、模板级使用次数或最近运行字段；页面只展示当前版本记录、静态校验、真实 generation 派生统计或空状态。
+  - 后端没有独立渲染预览 API；页面本地按 `{{variable}}` 做预览，真实渲染仍由生成请求中的后端 `PromptTemplateRenderService` 完成。
+  - `System Prompt` / `User Prompt` 没有独立后端字段；页面仅从 `templateContent` 中的标题片段安全推导，缺失时显示单字段说明。
+  - `log-analysis` 可编辑保存，但当前 `generateAi` 没有对应生成端点，页面禁用真实试运行，不新增假接口。
+- 截图脚本：
+  - `scripts/capture-portfolio-screenshots.mjs` 的 Prompt Studio 路径仍是 `/prompts`，等待选择器 `.templates-page` 仍存在。
+  - 本轮只把 Prompt Studio 试运行按钮匹配扩展为 `运行测试|试运行|运行模板|Test`；未重新生成 `docs/images/` 作品集截图。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign prompt studio with devflow design system`
+
 ## 下一轮建议
 
-建议下一轮二选一：优先做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base 等真实运行截图；或单独做 Prompt Studio 高保真重构，对齐 `docs/design/references/05-prompt-studio-ai-concept-cn.png`。下一轮仍不要同时重构多个页面。
+建议下一轮做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base / Prompt Studio 等真实运行截图，并更新 README 中的作品集截图引用。下一轮仍不要扩大后端能力。

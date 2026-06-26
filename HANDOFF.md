@@ -2,6 +2,18 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Prompt Studio 高保真中文版重构
+
+- 做了什么：只重构 Prompt Studio，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Knowledge Base。基于 `docs/design/references/05-prompt-studio-ai-concept-cn.png` 的提示词工作室结构，把 `PromptTemplatesView.vue` 改成左 Prompt 模板列表、中 Prompt 编辑器与渲染预览、右测试运行预览与执行详情、底部可观测性的真实 Prompt 管理页。
+- 页面内容：顶部展示 `Prompt 模板 -> 变量配置 -> 渲染预览 -> 测试运行 -> Trace / Human Review` 链路；左侧包含搜索、新建模板、类型筛选、状态筛选和模板列表；中间包含模板基础信息、System/User Prompt 派生预览、模板内容编辑、变量配置、原始 / 渲染 / JSON 预览、保存模板、保存版本和运行测试；右侧包含测试运行状态、Provider、Model、Token、Trace ID、原始响应、Human Review 和 Provider 配置提示；底部包含版本历史、测试结果、Prompt 校验、最近运行和变更记录。
+- 保留真实功能：保留 `GET /api/prompts` 模板列表、`POST /api/prompts` 新建模板、`PUT /api/prompts/{id}` 保存模板并由后端递增当前版本、已有 `POST /api/ai/{type}` 试运行；`log-analysis` 仍可编辑保存，但因当前 `generateAi` 没有对应端点，页面禁用试运行而不是新增假接口。
+- 使用真实接口：`GET /api/projects`、`GET /api/prompts`、`POST /api/prompts`、`PUT /api/prompts/{id}`、`GET /api/generations`、`POST /api/ai/requirement-split|code-plan|readme-generate|commit-message|fix-prompt`、`GET /api/generation-traces?generationRecordId={id}`、`GET /api/agent-runs?generationRecordId={id}`、`GET /api/agent-runs/{id}/trace`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`、`MetricCard`。本轮没有新增公共组件。
+- fallback / 派生边界：后端没有独立版本历史表、PromptOps 评测后端、单独渲染预览 API、模板级使用次数 / 最近运行字段、独立 Prompt 校验记录；页面只展示当前版本记录、前端静态校验、从真实 Generation Record 派生的统计或空状态。`System Prompt` / `User Prompt` 没有独立字段，仅从 `templateContent` 标题片段安全推导，缺失时显示单字段说明。API Key 不在前端展示。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Prompt Studio 路径仍是 `/prompts`，等待选择器 `.templates-page` 仍存在；本轮仅扩展试运行按钮匹配为 `运行测试|试运行|运行模板|Test`。未重新生成 `docs/images/` 作品集截图，建议下一轮统一截图并更新 README。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 下一步：建议做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base / Prompt Studio 等真实运行截图，并更新 README 中的作品集截图引用。
+
 ## 2026-06-26 - Codex - Knowledge Base 高保真中文版重构
 
 - 做了什么：只重构 Knowledge Base，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Prompt Studio。基于 `docs/design/references/04-knowledge-base-ai-concept-cn.png` 的三栏知识管理结构，把 `KnowledgeBaseView.vue` 改成左文档列表、中详情与 Chunk、右检索结果与审核、底部可观测性的真实 RAG 引用管理页。

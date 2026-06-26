@@ -121,7 +121,7 @@ async function prepareWorkbench(page) {
 }
 
 async function preparePromptStudio(page) {
-  const testButton = page.locator('button').filter({ hasText: /试运行|运行模板|Test/ }).first()
+  const testButton = page.locator('button').filter({ hasText: /运行测试|试运行|运行模板|Test/ }).first()
   if (await testButton.count()) {
     await testButton.click()
     await page.waitForSelector('.test-result', { timeout: 45000 }).catch(() => undefined)
