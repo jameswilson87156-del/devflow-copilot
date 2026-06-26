@@ -14,5 +14,10 @@ public class DashboardStatsResponse {
     private long todayGenerationCount;
     private long logAnalysisCount;
     private long promptTemplateCount;
+    private long agentRunCount;
+    private long humanReviewCount;
+    private long successCount;
+    private double successRate;
+    private long averageLatencyMs;
     private List<GenerationRecord> recentGenerations;
 }

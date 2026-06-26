@@ -6,6 +6,7 @@ import com.devflow.copilot.common.GenerationStatus;
 import com.devflow.copilot.dto.RecordQuery;
 import com.devflow.copilot.entity.GenerationRecord;
 import com.devflow.copilot.mapper.GenerationRecordMapper;
+import com.devflow.copilot.service.AgentWorkflowService;
 import com.devflow.copilot.service.GenerationRecordService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,11 @@ import java.util.List;
 public class GenerationRecordServiceImpl implements GenerationRecordService {
 
     private final GenerationRecordMapper mapper;
+    private final AgentWorkflowService agentWorkflowService;
 
-    public GenerationRecordServiceImpl(GenerationRecordMapper mapper) {
+    public GenerationRecordServiceImpl(GenerationRecordMapper mapper, AgentWorkflowService agentWorkflowService) {
         this.mapper = mapper;
+        this.agentWorkflowService = agentWorkflowService;
     }
 
     @Override
@@ -83,7 +86,9 @@ public class GenerationRecordServiceImpl implements GenerationRecordService {
         record.setStatus(target);
         record.setConfirmed(target == GenerationStatus.CONFIRMED);
         record.setSuccess(target != GenerationStatus.FAILED);
-        return save(record);
+        GenerationRecord saved = save(record);
+        agentWorkflowService.syncGenerationTransition(saved.getId(), target);
+        return saved;
     }
 
     @Override
@@ -100,5 +105,10 @@ public class GenerationRecordServiceImpl implements GenerationRecordService {
         return mapper.selectCount(Wrappers.<GenerationRecord>lambdaQuery()
                 .ge(GenerationRecord::getCreatedAt, start)
                 .lt(GenerationRecord::getCreatedAt, end));
+    }
+
+    public long successCount() {
+        return mapper.selectCount(Wrappers.<GenerationRecord>lambdaQuery()
+                .eq(GenerationRecord::getSuccess, true));
     }
 }

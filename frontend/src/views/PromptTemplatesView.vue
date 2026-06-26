@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, shallowRef } from 'vue'
-import { Edit, Plus } from '@element-plus/icons-vue'
+import { Edit, MagicStick, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { createPrompt, fetchPrompts, updatePrompt } from '@/api/devflow'
-import type { PromptTemplate } from '@/types/domain'
+import { createPrompt, fetchProjects, fetchPrompts, generateAi, updatePrompt } from '@/api/devflow'
+import type { AiGenerateResponse, ProjectContext, PromptTemplate } from '@/types/domain'
 
+const projects = shallowRef<ProjectContext[]>([])
 const prompts = shallowRef<PromptTemplate[]>([])
 const loading = shallowRef(false)
+const testing = shallowRef(false)
 const editingId = shallowRef<number>()
 const filterType = shallowRef('')
 const searchKeyword = shallowRef('')
+const selectedProjectId = shallowRef<number>()
+const testInput = shallowRef('请基于当前项目边界生成一个可交付的后端实现计划。')
+const testResult = shallowRef<AiGenerateResponse>()
 
 const form = reactive({
   templateKey: '',
@@ -64,6 +69,16 @@ async function loadPrompts(selectId?: number) {
   }
 }
 
+async function loadPageData() {
+  try {
+    const [projectData] = await Promise.all([fetchProjects(), loadPrompts()])
+    projects.value = projectData
+    selectedProjectId.value = projectData[0]?.id
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
+  }
+}
+
 function openCreate() {
   editingId.value = undefined
   Object.assign(form, {
@@ -93,6 +108,32 @@ async function submitPrompt() {
   }
 }
 
+async function runTemplateTest() {
+  if (!editingId.value) {
+    ElMessage.warning('请先选择或创建一个模板')
+    return
+  }
+  if (!testInput.value.trim()) {
+    ElMessage.warning('请输入试运行输入')
+    return
+  }
+  testing.value = true
+  try {
+    testResult.value = await generateAi(form.templateType, {
+      projectId: selectedProjectId.value,
+      input: testInput.value,
+      templateId: editingId.value,
+      extraContext: 'Prompt Studio 试运行：仅验证模板渲染、Provider 路径和 Generation Trace。',
+      knowledgeQuery: testInput.value,
+    })
+    ElMessage.success('模板试运行完成，已生成真实 Generation Trace')
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
+  } finally {
+    testing.value = false
+  }
+}
+
 function insertVariable(name: string) {
   form.templateContent = `${form.templateContent}${form.templateContent.endsWith(' ') ? '' : ' '}{{${name}}}`
   const variables = new Set(form.variables.split(',').map((item) => item.trim()).filter(Boolean))
@@ -117,7 +158,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : '模板操作失败'
 }
 
-onMounted(() => loadPrompts())
+onMounted(loadPageData)
 </script>
 
 <template>
@@ -162,8 +203,8 @@ onMounted(() => loadPrompts())
     <section class="template-editor panel">
       <div class="panel-header">
         <div>
-          <h3 class="panel-title">{{ editingId ? '模板编辑器' : '新建 Prompt 模板' }}</h3>
-          <p class="panel-subtitle">保存模板会递增版本，生成历史保留当时渲染内容</p>
+          <h3 class="panel-title">{{ editingId ? 'Prompt Studio' : '新建 Prompt 模板' }}</h3>
+          <p class="panel-subtitle">模板、变量、版本和试运行结果都进入真实生成链路</p>
         </div>
         <div class="editor-actions">
           <el-dropdown @command="insertVariable">
@@ -177,6 +218,7 @@ onMounted(() => loadPrompts())
               <el-dropdown-item command="errorLog">errorLog</el-dropdown-item>
             </el-dropdown-menu></template>
           </el-dropdown>
+          <el-button :icon="MagicStick" :loading="testing" @click="runTemplateTest">试运行模板</el-button>
           <el-button type="primary" :icon="Edit" @click="submitPrompt">{{ editingId ? '保存新版本' : '创建模板' }}</el-button>
         </div>
       </div>
@@ -189,6 +231,26 @@ onMounted(() => loadPrompts())
         <label><span>运行状态</span><div class="status-controls"><el-switch v-model="form.enabled" active-text="启用" inactive-text="停用" /><el-switch v-model="form.isDefault" active-text="默认模板" inactive-text="普通模板" /><b class="mono">v{{ form.version }}</b></div></label>
         <label class="content-field"><span>Prompt 内容</span><el-input v-model="form.templateContent" class="template-textarea mono" type="textarea" :autosize="{ minRows: 11, maxRows: 18 }" placeholder="请基于 {{projectName}} 和 {{techStack}} 处理需求：{{requirement}}" /></label>
         <div class="variables-preview"><span>渲染预览</span><pre v-html="highlightedTemplate"></pre></div>
+        <div class="studio-test">
+          <div class="test-head">
+            <div>
+              <strong>模板试运行</strong>
+              <span>真实调用生成接口，返回 provider、model、token、Agent Run 与知识引用</span>
+            </div>
+            <el-select v-model="selectedProjectId" placeholder="选择项目">
+              <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id" />
+            </el-select>
+          </div>
+          <el-input v-model="testInput" type="textarea" :autosize="{ minRows: 3, maxRows: 5 }" />
+          <div v-if="testResult" class="test-result">
+            <div><span>Trace</span><strong class="mono">GEN-{{ testResult.recordId }} / RUN-{{ testResult.agentRunId || '—' }}</strong></div>
+            <div><span>Provider</span><strong>{{ testResult.providerName }}</strong></div>
+            <div><span>Model</span><strong>{{ testResult.modelName }}</strong></div>
+            <div><span>Status</span><strong>{{ testResult.status }}</strong></div>
+            <div><span>Token</span><strong class="mono">{{ testResult.totalTokens ?? '—' }}</strong></div>
+            <div><span>KB 引用</span><strong class="mono">{{ testResult.knowledgeReferences?.length || 0 }}</strong></div>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -206,5 +268,16 @@ onMounted(() => loadPrompts())
 .template-meta { text-align: right; }.template-meta b { font-size: 11px; }.template-meta em { margin-top: 4px; color: var(--muted); font-size: 9px; font-style: normal; }.template-meta em.default { color: var(--color-warning); }.template-meta small { margin-top: 5px; color: var(--color-text-disabled); font-size: 8px; }
 .editor-actions, .status-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.editor-form { padding: 12px; display: grid; gap: 9px; }.editor-form label, .variables-preview { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: start; gap: 10px; }.editor-form label > span, .variables-preview > span { min-height: 32px; display: flex; align-items: center; color: var(--muted); font-size: 11px; }.status-controls { min-height: 32px; }.status-controls b { margin-left: auto; color: var(--color-accent); font-size: 11px; }
 .template-textarea :deep(textarea) { font-family: var(--font-mono); line-height: 1.6; }.variables-preview pre { margin: 0; min-height: 132px; max-height: 260px; overflow: auto; padding: 10px; border: var(--border-default); border-radius: 4px; background: var(--color-bg); color: var(--muted); font: 10px/1.65 var(--font-mono); white-space: pre-wrap; }.variables-preview :deep(mark) { padding: 0 2px; border-radius: 2px; background: rgba(199, 164, 90, .12); color: var(--color-warning); }
+.studio-test { grid-column: 1 / -1; display: grid; gap: 8px; padding: 10px; border: var(--border-default); border-radius: 4px; background: var(--color-bg); }
+.test-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.test-head strong, .test-head span { display: block; }
+.test-head strong { font-size: 12px; }
+.test-head span { margin-top: 4px; color: var(--color-text-secondary); font-size: 10px; }
+.test-head .el-select { width: 220px; }
+.test-result { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--color-border-subtle); }
+.test-result div { min-width: 0; padding: 8px; background: var(--color-surface); }
+.test-result span, .test-result strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.test-result span { color: var(--color-text-disabled); font-size: 9px; }
+.test-result strong { margin-top: 4px; font-size: 10px; }
 @media (max-width: 1050px) { .templates-page { grid-template-columns: 1fr; } }
 </style>

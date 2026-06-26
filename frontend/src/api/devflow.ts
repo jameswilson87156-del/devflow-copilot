@@ -1,9 +1,15 @@
 import { deleteData, getData, postData, putData } from './http'
 import type {
+  AgentRun,
+  AgentRunTrace,
   AiGenerateRequest,
   AiGenerateResponse,
   DashboardStats,
   GenerationRecord,
+  GenerationTrace,
+  KnowledgeChunk,
+  KnowledgeDocument,
+  KnowledgeReference,
   LogAnalysis,
   LogAnalyzeResponse,
   ProjectContext,
@@ -12,6 +18,18 @@ import type {
 
 export function fetchDashboardStats() {
   return getData<DashboardStats>('/dashboard/stats')
+}
+
+export function fetchGenerationTraces(params?: { generationRecordId?: number }) {
+  return getData<GenerationTrace[]>('/generation-traces', params)
+}
+
+export function fetchAgentRuns(params?: { projectId?: number; generationRecordId?: number }) {
+  return getData<AgentRun[]>('/agent-runs', params)
+}
+
+export function fetchAgentRunTrace(id: number) {
+  return getData<AgentRunTrace>(`/agent-runs/${id}/trace`)
 }
 
 export function fetchProjects() {
@@ -75,4 +93,31 @@ export function confirmGeneration(id: number) {
 
 export function saveGeneration(id: number) {
   return postData<GenerationRecord>(`/generations/${id}/save`)
+}
+
+export function fetchKnowledgeDocuments() {
+  return getData<KnowledgeDocument[]>('/knowledge/documents')
+}
+
+export function createKnowledgeDocument(payload: {
+  title: string
+  sourceType?: string
+  sourceUri?: string
+  content: string
+  embeddingModel?: string
+  metadata?: string
+}) {
+  return postData<KnowledgeDocument>('/knowledge/documents', payload)
+}
+
+export function fetchKnowledgeChunks(documentId: number) {
+  return getData<KnowledgeChunk[]>(`/knowledge/documents/${documentId}/chunks`)
+}
+
+export function searchKnowledge(payload: { query: string; documentIds?: number[]; topK?: number }) {
+  return postData<KnowledgeReference[]>('/knowledge/search', payload)
+}
+
+export function fetchKnowledgeReferences(generationRecordId: number) {
+  return getData<KnowledgeReference[]>('/knowledge/references', { generationRecordId })
 }

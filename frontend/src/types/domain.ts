@@ -57,11 +57,125 @@ export interface GenerationRecord {
   updatedAt?: string
 }
 
+export interface GenerationTrace {
+  id: number
+  generationRecordId: number
+  promptVersion?: number
+  inputVariables?: string
+  renderedPromptSummary?: string
+  providerName?: string
+  modelName?: string
+  status: string
+  latencyMs?: number
+  errorMessage?: string
+  createdAt: string
+}
+
+export interface AgentRun {
+  id: number
+  projectId: number
+  generationRecordId?: number
+  title: string
+  goal?: string
+  status: string
+  providerName?: string
+  modelName?: string
+  latencyMs?: number
+  startedAt?: string
+  completedAt?: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface AgentStep {
+  id: number
+  runId: number
+  stepOrder: number
+  stepType: string
+  stepName: string
+  status: string
+  summary?: string
+  latencyMs?: number
+  startedAt?: string
+  completedAt?: string
+}
+
+export interface ToolCallRecord {
+  id: number
+  runId: number
+  stepId?: number
+  toolName: string
+  inputSummary?: string
+  outputSummary?: string
+  status: string
+  latencyMs?: number
+  createdAt: string
+}
+
+export interface HumanReview {
+  id: number
+  runId: number
+  generationRecordId: number
+  reviewStatus: string
+  reviewer?: string
+  comment?: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface AgentRunTrace {
+  run: AgentRun
+  steps: AgentStep[]
+  toolCalls: ToolCallRecord[]
+  humanReviews: HumanReview[]
+}
+
+export interface KnowledgeDocument {
+  id: number
+  title: string
+  sourceType: string
+  sourceUri?: string
+  content: string
+  chunkCount: number
+  embeddingModel?: string
+  metadata?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface KnowledgeChunk {
+  id: number
+  documentId: number
+  chunkIndex: number
+  content: string
+  contentSummary?: string
+  keywords?: string
+  embeddingModel?: string
+  embeddingVector?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface KnowledgeReference {
+  documentId: number
+  documentTitle: string
+  chunkId: number
+  chunkIndex: number
+  score: number
+  citationLabel: string
+  snippet: string
+}
+
 export interface DashboardStats {
   projectCount: number
   todayGenerationCount: number
   logAnalysisCount: number
   promptTemplateCount: number
+  agentRunCount: number
+  humanReviewCount: number
+  successCount: number
+  successRate: number
+  averageLatencyMs: number
   recentGenerations: GenerationRecord[]
 }
 
@@ -71,6 +185,8 @@ export interface AiGenerateRequest {
   extraContext?: string
   templateId?: number
   variables?: Record<string, string>
+  knowledgeQuery?: string
+  knowledgeDocumentIds?: number[]
 }
 
 export interface AiGenerateResponse {
@@ -88,6 +204,8 @@ export interface AiGenerateResponse {
   promptTemplateName?: string
   promptTemplateVersion?: number
   errorMessage?: string
+  agentRunId?: number
+  knowledgeReferences?: KnowledgeReference[]
 }
 
 export interface LogAnalysis {

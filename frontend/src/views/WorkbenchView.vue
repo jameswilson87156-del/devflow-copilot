@@ -22,10 +22,11 @@ const loading = shallowRef(false)
 const result = shallowRef<AiGenerateResponse>()
 const aiPanelCollapsed = shallowRef(new URLSearchParams(window.location.search).get('ai') === 'collapsed')
 
-const form = reactive<{ type: string; input: string; extraContext: string; templateId?: number }>({
+const form = reactive<{ type: string; input: string; extraContext: string; knowledgeQuery: string; templateId?: number }>({
   type: 'requirement-split',
   input: '为 DevFlow Copilot 增加日志分析历史筛选，并保证所有输出需要人工确认。',
   extraContext: '',
+  knowledgeQuery: 'DevFlow Copilot local-rule Provider Generation Trace',
   templateId: undefined,
 })
 
@@ -97,6 +98,7 @@ async function runGenerate() {
       projectId: selectedProjectId.value,
       input: form.input,
       extraContext: form.extraContext,
+      knowledgeQuery: form.knowledgeQuery,
       templateId: form.templateId,
     })
     ElMessage.success('生成完成，等待人工确认')
@@ -219,6 +221,7 @@ onMounted(loadPageData)
         <div class="config-grid">
           <label><span>任务类型</span><el-select v-model="form.type" class="full"><el-option v-for="item in generationTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></label>
           <label><span>Prompt 模板</span><el-select v-model="form.templateId" class="full" placeholder="使用默认模板"><el-option v-for="item in availableTemplates" :key="item.id" :label="`${item.templateName} · v${item.version}${item.isDefault ? ' · 默认' : ''}`" :value="item.id" /></el-select></label>
+          <label><span>知识检索</span><el-input v-model="form.knowledgeQuery" placeholder="留空时使用输入内容检索 Knowledge Base" /></label>
           <label><span>补充上下文</span><el-input v-model="form.extraContext" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="相关文件、接口边界、验收标准、限制条件。" /></label>
         </div>
 
@@ -261,6 +264,19 @@ onMounted(loadPageData)
               <strong>{{ item.value }}</strong>
             </div>
           </div>
+        </div>
+        <div v-if="result?.knowledgeReferences?.length" class="kb-card panel">
+          <header>
+            <strong>Knowledge 引用</strong>
+            <span class="mono">{{ result.knowledgeReferences.length }} chunks</span>
+          </header>
+          <article v-for="item in result.knowledgeReferences" :key="item.chunkId">
+            <div>
+              <strong>{{ item.citationLabel }}</strong>
+              <span class="mono">score {{ item.score.toFixed(1) }}</span>
+            </div>
+            <p>{{ item.snippet }}</p>
+          </article>
         </div>
         <MarkdownPanel :content="result?.outputContent || ''" title="生成 Artifact" copy-label="复制结果" />
         <div class="review-bar panel">
@@ -309,6 +325,15 @@ onMounted(loadPageData)
 .result-column { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 8px; min-width: 0; }.ai-collapsed .result-column { grid-template-columns: 40px; }.collapse-rail { width: 32px; min-height: 280px; border: var(--border-default); border-radius: 4px; background: var(--color-surface); color: var(--muted); cursor: pointer; }.collapse-rail:hover { color: var(--text); border-color: var(--color-accent); }
 .result-content { min-width: 0; display: grid; gap: 8px; align-content: start; }.artifact-meta { padding: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--color-border-subtle); }.artifact-meta div { min-width: 0; padding: 8px; background: var(--color-bg); }.artifact-meta span, .artifact-meta strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.artifact-meta span { color: var(--muted); font-size: 9px; }.artifact-meta strong { margin-top: 4px; font-size: 10px; }
 .trace-card { padding: 10px; display: grid; gap: 9px; }.trace-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }.trace-card header strong { font-size: 12px; }.trace-card header span { color: var(--color-text-disabled); font-size: 9px; }.trace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--color-border-subtle); }.trace-grid div { min-width: 0; padding: 8px; background: var(--color-bg); }.trace-grid span, .trace-grid strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.trace-grid span { color: var(--color-text-disabled); font-size: 9px; }.trace-grid strong { margin-top: 4px; font-size: 10px; }
+.kb-card { display: grid; gap: 1px; padding: 1px; background: var(--color-border-subtle); }
+.kb-card header, .kb-card article { min-width: 0; padding: 8px; background: var(--color-surface); }
+.kb-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kb-card header strong, .kb-card article strong, .kb-card article span, .kb-card article p { display: block; overflow: hidden; text-overflow: ellipsis; }
+.kb-card header strong { font-size: 12px; }
+.kb-card header span, .kb-card article span { color: var(--color-text-disabled); font-size: 9px; white-space: nowrap; }
+.kb-card article div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kb-card article strong { color: var(--color-accent); font-size: 10px; white-space: nowrap; }
+.kb-card article p { margin: 6px 0 0; color: var(--color-text-secondary); font-size: 10px; line-height: 16px; }
 .review-bar { padding: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }.review-bar strong, .review-bar span { display: block; }.review-bar span { margin-top: 3px; color: var(--muted); font-size: 9px; }
 @media (max-width: 1100px) { .workbench, .workbench.ai-collapsed { grid-template-columns: 1fr; }.result-column { grid-template-columns: 1fr; }.collapse-rail { display: none; }.result-content { display: grid; } }
 </style>

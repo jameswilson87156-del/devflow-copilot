@@ -127,8 +127,8 @@ All numbers, durations, percentages, token counts, timestamps, Trace IDs, line n
 1. **Navigation rail — 220px expanded / 56px collapsed**
    - Product mark: compact `DF` monogram built from two bracket-like strokes; no mascot.
    - Workspace selector: `支付平台 / dev` with branch icon and chevron.
-   - Primary destinations: Overview, Workbench, Log Analyzer, Generation History, Prompt Templates.
-   - Utility destinations at bottom: Knowledge Sources, Settings, keyboard shortcuts.
+   - Primary destinations: Overview, Workbench, Agent Run Trace, Knowledge Base, Log Analyzer, Generation History, Prompt Studio.
+   - Utility destinations at bottom: Settings and keyboard shortcuts.
    - Active item uses a 2px Runtime Mint left rule, Primary Ink text, and Active Row background. No pill navigation.
 
 2. **Command bar — 40px high**
@@ -690,6 +690,40 @@ Generate the DevFlow Copilot Generation History as an audit ledger. Use a narrow
 Generate the DevFlow Copilot Prompt Templates screen as a versioned configuration editor. Use a 42/58 master-detail split: grouped template registry rows on the left and a Prompt editor on the right with Prompt, Variables, Test Cases, and Version Diff tabs. Show {{variable}} syntax, enabled scope, test status, rendered preview, token estimate, and 保存新版本. No card gallery.
 ```
 
+## 11.1 Screen Specification — Agent Run Trace
+
+### Intent
+
+Show the true execution record of one Agentic Coding Workflow run. This screen must make the system explainable without pretending to be a full multi-agent runtime.
+
+### Layout
+
+- Left rail: dense Agent Run list with status, generation record ID, provider/model, created time, and elapsed time.
+- Main pane: vertical Trace Spine of `TASK_DECOMPOSITION`, `PROMPT_RENDER`, `KNOWLEDGE_RETRIEVAL`, `LLM_GENERATION`, and `HUMAN_REVIEW`.
+- Tool calls appear inline under the step that produced them, with tool name, input summary, output summary, status, and latency.
+- Right inspector: Human Review records with `PENDING`, `SAVED`, `CONFIRMED`, or `REJECTED` state.
+
+### Boundary Copy
+
+Use copy such as `可解释的 Agent Workflow 记录，不模拟复杂多 Agent` when needed. Do not describe this as autonomous multi-agent orchestration.
+
+## 11.2 Screen Specification — Knowledge Base
+
+### Intent
+
+Show the lightweight RAG loop: create a knowledge document, split it into chunks, search chunks, and return citations for generation.
+
+### Layout
+
+- Left rail: document list with source type, chunk count, updated time.
+- Top main pane: document creation form and search form.
+- Results pane: chunk citation label, score, and snippet.
+- Bottom pane: selected document chunks with chunk index, summary, keywords, and embedding field status.
+
+### Boundary Copy
+
+Show `embedding 待接入` when vectors are not populated. Do not present keyword retrieval as a vector database.
+
 ## 19. Final Quality Gate
 
 Before accepting any generated screen, verify all items:
@@ -705,4 +739,3 @@ Before accepting any generated screen, verify all items:
 - No hero, glass, large gradient, decorative blob, fake chat, or generic SaaS composition appears.
 - Focus, error, loading, empty, and reduced-motion states are accounted for.
 - The screen remains usable at 1440px without clipped critical controls.
-

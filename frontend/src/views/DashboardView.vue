@@ -12,6 +12,11 @@ const stats = shallowRef<DashboardStats>({
   todayGenerationCount: 0,
   logAnalysisCount: 0,
   promptTemplateCount: 0,
+  agentRunCount: 0,
+  humanReviewCount: 0,
+  successCount: 0,
+  successRate: 0,
+  averageLatencyMs: 0,
   recentGenerations: [],
 })
 const promptTemplates = shallowRef<PromptTemplate[]>([])
@@ -26,11 +31,11 @@ const enabledPromptCount = computed(() => promptTemplates.value.filter((template
 const disabledPromptCount = computed(() => Math.max(promptTemplates.value.length - enabledPromptCount.value, 0))
 
 const metricItems = computed(() => [
-  { label: '项目总数', value: stats.value.projectCount, code: '项目', tone: 'accent' },
-  { label: '今日生成', value: stats.value.todayGenerationCount, code: '生成', tone: 'accent' },
-  { label: '待人工确认', value: reviewQueue.value.length, code: 'Review', tone: 'warning' },
-  { label: '日志诊断', value: stats.value.logAnalysisCount, code: '日志', tone: 'info' },
-  { label: 'Prompt 模板', value: stats.value.promptTemplateCount, code: 'Prompt', tone: 'accent' },
+  { label: '今日运行数', value: stats.value.todayGenerationCount, code: 'Runs', tone: 'accent' },
+  { label: '成功率', value: `${stats.value.successRate || 0}%`, code: 'Success', tone: 'accent' },
+  { label: '人工确认数', value: stats.value.humanReviewCount || reviewQueue.value.length, code: 'Review', tone: 'warning' },
+  { label: '平均耗时', value: `${stats.value.averageLatencyMs || 0}ms`, code: 'Latency', tone: 'info' },
+  { label: 'Agent Run 数', value: stats.value.agentRunCount || 0, code: 'Agent Run', tone: 'accent' },
 ])
 
 const workflowCards = [
@@ -144,7 +149,7 @@ onMounted(loadDashboard)
       <div class="command-title">
         <span class="section-code mono">DEVFLOW / AI CODING COMMAND CENTER</span>
         <h2>AI 编码工作流总控台</h2>
-        <p>项目上下文 → Prompt 模板 → Artifact 生成 → 日志诊断 → 人工 Review → 历史沉淀。</p>
+        <p>项目上下文 → Prompt 模板 → Knowledge 检索 → Provider 生成 → Agent Trace → 人工 Review。</p>
       </div>
       <button class="primary-action" type="button" @click="router.push('/workbench')">
         <el-icon><Plus /></el-icon>
@@ -244,14 +249,14 @@ onMounted(loadDashboard)
           <header class="pane-header compact">
             <div class="pane-title">
               <span class="pane-mark" aria-hidden="true"></span>
-              <div>
-                <h3 id="trace-title">最近生成 Trace</h3>
-                <p class="mono">Provider / Model / Status</p>
-              </div>
-            </div>
-          </header>
-          <div class="trace-list">
-            <button v-for="record in traceRecords" :key="record.id" type="button" @click="openRecord(record)">
+          <div>
+            <h3 id="trace-title">最近 Agent Trace</h3>
+            <p class="mono">Provider / Model / Status</p>
+          </div>
+        </div>
+      </header>
+      <div class="trace-list">
+            <button v-for="record in traceRecords" :key="record.id" type="button" @click="router.push({ path: '/agent-runs', query: { generationRecordId: record.id } })">
               <span class="trace-node" :class="statusClass(record)" aria-hidden="true"></span>
               <span>
                 <strong>{{ record.modelName }}</strong>

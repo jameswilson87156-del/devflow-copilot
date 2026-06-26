@@ -3,6 +3,8 @@ package com.devflow.copilot.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class AiGenerateResponse {
@@ -21,4 +23,6 @@ public class AiGenerateResponse {
     private String promptTemplateName;
     private Integer promptTemplateVersion;
     private String errorMessage;
+    private Long agentRunId;
+    private List<KnowledgeReferenceResponse> knowledgeReferences;
 }

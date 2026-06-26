@@ -31,7 +31,7 @@ const currentTitle = computed(() => {
 
       <nav class="nav-stack">
         <RouterLink
-          v-for="item in navItems.slice(0, 5)"
+          v-for="item in navItems.filter((nav) => nav.name !== 'DocsShortcut')"
           :key="item.path"
           :to="item.path"
           class="nav-item"

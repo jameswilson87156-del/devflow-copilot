@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -21,4 +22,8 @@ public class AiGenerateRequest {
     private Long templateId;
     @Size(max = 30, message = "模板变量不能超过 30 个")
     private Map<String, String> variables;
+    @Size(max = 1000, message = "知识检索关键词不能超过 1000 个字符")
+    private String knowledgeQuery;
+    @Size(max = 20, message = "最多指定 20 个知识文档")
+    private List<Long> knowledgeDocumentIds;
 }
