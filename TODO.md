@@ -263,6 +263,212 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。后端本轮未修改，未运行 `mvn test`。
 - 建议 commit message：`docs: record frontend ui redesign audit`
 
+## P1-8：前端设计系统第一阶段地基 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：在不一次重构 5 个页面的前提下，为 DevFlow Copilot 中文版 AI SaaS 控制台建立低风险前端设计系统地基。
+- 涉及文件：`frontend/src/router/index.ts`、`frontend/src/layouts/DevFlowLayout.vue`、`frontend/src/styles/theme.css`、`frontend/src/views/DashboardView.vue`、`frontend/src/components/*.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 左侧导航统一为中文分组结构，包含工作流、可观测性、知识与引用、治理与审核、配置。
+  - 保留已有真实路由；未实现独立页面的 `工具调用`、`人工审核`、`Provider`、`设置` 以 disabled 导航项展示，不新增假页面。
+  - 全局 design tokens 统一放在 `frontend/src/styles/theme.css`，包含深色背景、卡片背景、蓝紫主色、状态色、文本色、间距、字号、圆角、阴影、sidebar 宽度和 topbar 高度。
+  - 新增公共组件骨架：`SidebarNav`、`TopBar`、`MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`。
+  - `DevFlowLayout` 接入 `SidebarNav` 和 `TopBar`；`DashboardView` 轻量接入 `MetricCard` 和 `SectionCard`。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。
+  - 未把 `docs/design/references/` 的 AI 概念图当作真实截图。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: add devflow frontend design system foundation`
+
+## P1-9：Dashboard 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/01-dashboard-ai-concept-cn.png`，只重构 Dashboard，不改 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio 或后端。
+- 涉及文件：`frontend/src/views/DashboardView.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Dashboard 首屏改为深色 DevFlow Copilot Hero，包含标题、Agentic Coding 工作流控制台副标题、Prompt / Provider / Trace / Knowledge / Human Review 说明和小型 Agent Workflow Overview。
+  - KPI 区使用 `MetricCard` 展示今日运行数、成功率、平均耗时、人工审核、工具调用、知识库命中。
+  - 中部使用 `SectionCard` 组织最近智能体运行、启用中的 Prompt 模板、Provider 健康状态、最近人工审核、最新知识引用。
+  - 右侧模块补充 Agent Workflow Overview、最近活动时间线和高频工具。
+  - 复用 `MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`；未新增假接口。
+- 真实接口：
+  - `GET /api/dashboard/stats`
+  - `GET /api/prompts`
+  - `GET /api/logs/history`
+  - `GET /api/agent-runs`
+  - `GET /api/agent-runs/{id}/trace`
+  - `GET /api/knowledge/documents`
+  - `GET /api/knowledge/references?generationRecordId={id}`
+- fallback / 派生说明：
+  - `dashboard/stats` 不直接提供工具调用总数、知识命中总数、Provider 健康明细和 Human Review 列表；页面集中从现有 Trace / Knowledge 引用接口派生。
+  - 缺失 provider/model/reviewer 时仅使用 `local-rule`、`local-rule`、`未分配` 等安全展示 fallback。
+  - 缺失 Tool Call 或 Knowledge 引用时显示 0 或空状态，不伪造成后端真实统计。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。
+  - 未重新生成 `docs/images/` 真实截图；建议下一轮或统一截图任务执行。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign dashboard with devflow design system`
+
+## P1-10：Workbench 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/02-workbench-ai-concept-cn.png`，只重构 Workbench，不改后端、不改 Dashboard、Agent Run Trace、Knowledge Base、Prompt Studio。
+- 涉及文件：`frontend/src/views/WorkbenchView.vue`、`scripts/capture-portfolio-screenshots.mjs`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Workbench 改为左侧任务配置区、中间生成结果区、右侧执行详情区、底部追踪与日志区。
+  - 左侧保留任务类型、项目、Prompt 模板、任务输入、补充上下文、知识检索等真实生成字段，并补充本页 UI-only 的任务标题、优先级、分支、上下文文件、关注区域、语言和约束展示。
+  - 中间保留生成结果展示，新增预览 / 差异 / 原始 / JSON 视图；无真实 diff 时显示空状态，不伪造 diff。
+  - 中间新增结构化响应和建议文件区；仅从响应 JSON 或响应文本安全派生，缺失字段显示 0 或空状态。
+  - 右侧新增执行详情、知识引用、人工审核、工具调用摘要。
+  - 底部新增生成追踪、工具调用、状态历史和日志，优先展示真实 Agent Run Trace / Generation Trace / Tool Call 数据。
+  - 截图脚本 Workbench 等待选择器更新为兼容新结果区。
+- 保留真实功能：
+  - `运行工作流`
+  - `保存记录`
+  - `标记已审核 / 确认`
+  - 项目选择、Prompt 模板选择、知识检索 query、补充上下文输入和生成历史刷新
+- 真实接口：
+  - `GET /api/projects`
+  - `GET /api/generations`
+  - `GET /api/prompts`
+  - `POST /api/ai/*`
+  - `POST /api/generations/{id}/save`
+  - `POST /api/generations/{id}/confirm`
+  - `GET /api/generation-traces?generationRecordId={id}`
+  - `GET /api/agent-runs?generationRecordId={id}`
+  - `GET /api/agent-runs/{id}/trace`
+  - `GET /api/knowledge/references?generationRecordId={id}`
+- fallback / 派生说明：
+  - 后端未提供任务标题、优先级、分支、上下文文件、关注区域、语言等持久字段；本轮仅作为 Workbench 本页配置展示，不写入后端。
+  - 后端不保证返回 diff、files_created、files_changed、tests_added、dependencies；页面只从响应 JSON 或文本安全派生，缺失时显示空状态。
+  - Provider 降级策略文案来自既有 Provider Router 行为说明，不伪造成独立健康接口。
+  - 日志区只展示真实 `errorMessage`；无错误时显示空状态。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未新增自动改代码、自动 Git 提交、SSE、登录权限。
+  - 未重新生成 `docs/images/` 真实截图；建议下一轮做统一截图任务，或单独重构 Knowledge Base。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign workbench with devflow design system`
+
+## P1-11：Knowledge Base 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/04-knowledge-base-ai-concept-cn.png`，只重构 Knowledge Base，不改后端、不改 Dashboard、Workbench、Agent Run Trace、Prompt Studio。
+- 涉及文件：`frontend/src/views/KnowledgeBaseView.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Knowledge Base 改为左侧文档列表、中间文档详情与 Chunk 切片、右侧检索结果详情与审核状态、底部检索历史 / 引用历史 / 生成知识引用 / 索引日志的高密度知识引用工作台。
+  - 顶部明确展示 `文档 -> Chunk -> 检索 -> 引用 -> 生成 -> Trace` 链路，不做普通文档列表页。
+  - 左侧保留搜索框、新增文档按钮、来源筛选、状态筛选和真实文档列表；文档选择后会重新加载真实 Chunk 并触发当前关键词检索。
+  - 中间保留创建知识文档、加载文档 Chunk、关键词检索等真实功能；新增 Chunk 切片、命中结果、检索时间线、文档信息、访问控制分区。
+  - 右侧展示当前命中 Chunk 的查询、来源、score、引用预览、生成使用情况和关联 Agent Run；没有 Trace / 审核记录时显示 `未关联 Trace`、`暂无知识发布审核记录`。
+  - 底部可观测性区域展示本页会话检索历史、真实 `generation_knowledge_reference` 引用历史、按 Generation Record 聚合的知识引用和由文档 / Chunk 状态派生的索引记录。
+- 保留真实功能：
+  - `GET /api/knowledge/documents` 文档列表。
+  - `POST /api/knowledge/documents` 新增文档并由后端切片。
+  - `GET /api/knowledge/documents/{id}/chunks` 真实 Chunk 列表。
+  - `POST /api/knowledge/search` 关键词 / 简单相似度检索。
+  - `GET /api/knowledge/references?generationRecordId={id}` 生成知识引用记录。
+- 额外使用真实接口：
+  - `GET /api/generations` 用于采样最近 Generation Record。
+  - `GET /api/agent-runs?generationRecordId={id}` 用于在引用历史中显示可关联的 Agent Run。
+- fallback / 派生说明：
+  - 后端未提供文档发布状态字段；状态优先从 `metadata status` 读取，否则按 `chunkCount > 0` 安全派生为 `已索引`，缺失时显示 `草稿 / 待审核`。
+  - 后端未提供 Chunk Token 数、最近使用、检索日志持久化、索引耗时、知识发布审核人或审核意见；页面显示 `未记录` 或空状态，不伪造。
+  - `embeddingModel / embeddingVector` 仅展示为预留扩展点；页面文案保持 `关键词检索 / RAG 引用`，没有写成向量数据库已启用。
+  - 引用使用次数、首次 / 最近使用时间只从已读取的真实 generation knowledge references 派生，未命中时显示未记录。
+- 截图脚本：
+  - `scripts/capture-portfolio-screenshots.mjs` 的 Knowledge Base 路径仍是 `/knowledge`，等待选择器 `.knowledge-page` 仍存在，本轮不需要调整脚本。
+  - 本轮未重新生成 `docs/images/` 作品集截图；建议后续统一截图任务执行。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。使用本机 Chrome 对 `/knowledge` 做过 DOM 烟测，左/中/右/底部四区渲染存在；临时验证截图已删除，未纳入本轮变更。
+- 建议 commit message：`feat: redesign knowledge base with devflow design system`
+
+## P1-12：Prompt Studio 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/05-prompt-studio-ai-concept-cn.png`，只重构 Prompt Studio，不改后端、不新增假接口、不改 Dashboard、Workbench、Agent Run Trace、Knowledge Base。
+- 涉及文件：`frontend/src/views/PromptTemplatesView.vue`、`scripts/capture-portfolio-screenshots.mjs`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Prompt Studio 改为左侧 Prompt 模板列表、中间 Prompt 编辑器与渲染预览、右侧测试运行预览与执行详情、底部版本历史 / 测试结果 / Prompt 校验 / 最近运行 / 变更记录。
+  - 顶部明确展示 `Prompt 模板 -> 变量配置 -> 渲染预览 -> 测试运行 -> Trace / Human Review` 链路，不做普通文本编辑器或 CRUD 列表。
+  - 左侧保留搜索、新建模板、类型筛选、状态筛选和真实模板列表；使用次数和最近运行从真实 generation records 派生，缺失时显示未记录。
+  - 中间保留模板名称、Key、类型、版本、启用 / 默认状态、模板内容、variables 字段、保存模板、保存版本和运行测试；使用 `CodeBlock` 展示 System/User Prompt 派生预览、渲染后 Prompt 和 JSON 预览。
+  - 右侧展示真实试运行状态、耗时、Trace ID、Provider、Model、Token、原始响应、查看 Generation Trace 和 Human Review 状态；缺失时显示空状态。
+  - 底部 Prompt 校验只做前端静态校验：内容非空、变量占位符、必填变量覆盖、长度阈值、敏感占位符；不包装成 PromptOps、LLM-as-Judge 或自动评测后端能力。
+- 保留真实功能：
+  - `GET /api/prompts` 模板列表。
+  - `POST /api/prompts` 新建模板。
+  - `PUT /api/prompts/{id}` 保存模板；后端 update 会递增当前 `version`。
+  - `POST /api/ai/{type}` 试运行支持已有 `requirement-split`、`code-plan`、`readme-generate`、`commit-message`、`fix-prompt` 类型。
+- 额外使用真实接口：
+  - `GET /api/projects` 用于测试项目和变量示例。
+  - `GET /api/generations` 用于模板使用次数、最近运行和测试结果历史。
+  - `GET /api/generation-traces?generationRecordId={id}` 用于 Trace ID、Provider、Model、耗时等可观测字段。
+  - `GET /api/agent-runs?generationRecordId={id}` 与 `GET /api/agent-runs/{id}/trace` 用于关联 Agent Run 与 Human Review。
+- fallback / 派生说明：
+  - 后端没有独立版本历史表、PromptOps 评测表、单独 Prompt 校验记录、模板级使用次数或最近运行字段；页面只展示当前版本记录、静态校验、真实 generation 派生统计或空状态。
+  - 后端没有独立渲染预览 API；页面本地按 `{{variable}}` 做预览，真实渲染仍由生成请求中的后端 `PromptTemplateRenderService` 完成。
+  - `System Prompt` / `User Prompt` 没有独立后端字段；页面仅从 `templateContent` 中的标题片段安全推导，缺失时显示单字段说明。
+  - `log-analysis` 可编辑保存，但当前 `generateAi` 没有对应生成端点，页面禁用真实试运行，不新增假接口。
+- 截图脚本：
+  - `scripts/capture-portfolio-screenshots.mjs` 的 Prompt Studio 路径仍是 `/prompts`，等待选择器 `.templates-page` 仍存在。
+  - 本轮只把 Prompt Studio 试运行按钮匹配扩展为 `运行测试|试运行|运行模板|Test`；未重新生成 `docs/images/` 作品集截图。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign prompt studio with devflow design system`
+
+## P1-13：统一生成真实浏览器截图并更新 README ✅ 本轮完成
+
+- 状态：**done**
+- 背景：前端设计系统、Dashboard、Workbench、Knowledge Base、Prompt Studio 已完成高保真中文版重构；本轮只做作品集截图和 README 收口，不继续大改页面、不改后端核心逻辑、不新增接口。
+- 涉及文件：`README.md`、`TODO.md`、`HANDOFF.md`、`docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/knowledge-base-rag.png`、`docs/images/prompt-studio.png`、`docs/images/human-review-trace-detail.png`。
+- 截图脚本：
+  - 使用既有 `frontend` 脚本 `npm run screenshots:portfolio`。
+  - 本轮没有修改 `scripts/capture-portfolio-screenshots.mjs`。
+  - 脚本确认覆盖 `/`、`/workbench`、`/agent-runs`、`/knowledge`、`/prompts`，并通过真实后端 API 预热 demo Agent Workflow。
+- 实际生成截图：
+  - `docs/images/dashboard-agentic.png`，1440x1040。
+  - `docs/images/workbench-running.png`，1440x1040。
+  - `docs/images/agent-run-trace.png`，1440x1040。
+  - `docs/images/knowledge-base-rag.png`，1440x1040。
+  - `docs/images/prompt-studio.png`，1440x1040。
+  - `docs/images/human-review-trace-detail.png`，1440x1040。
+- README 更新：
+  - 顶部截图展示区补充 Prompt Studio 和 Human Review Trace。
+  - 项目截图小节明确 `docs/images/` 是真实浏览器运行截图来源。
+  - 新增说明：`docs/design/references/` 是 AI-generated visual references，不是 runtime screenshots，也不作为 README 主展示图来源。
+  - 核心功能文案补充 Prompt Studio、Tool Call、Generation Trace / Human Review 关联；继续保持 local-rule、Knowledge Base 关键词检索、非完整多 Agent Runtime、非自动改代码系统等真实边界。
+- 验证结果：
+  - `cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - 遗留优化：后续可做前端 bundle split / manual chunks，降低大 chunk 警告。
+- 建议 commit message：`docs: refresh devflow portfolio screenshots and readme`
+
+## P1-14：Production Demo Readiness / 部署前安全收口 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：今天准备部署服务器，本轮只做 portfolio demo 部署前安全收口，不继续重构页面、不改后端核心业务逻辑、不新增复杂功能。
+- 涉及文件：`README.md`、`docs/deployment-plan.md`、`docs/deployment-production-demo.md`、`docs/env.example`、`docs/nginx/devflow-demo.conf.example`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 新增 `docs/deployment-production-demo.md`，说明项目定位、部署边界、推荐 Nginx + Spring Boot 架构、服务器部署步骤、环境变量、安全说明和验收 checklist。
+  - 新增 `docs/env.example`，只包含安全占位符，说明公开演示可使用 `local-rule`，真实 Provider 必须通过服务器环境变量配置。
+  - 新增 `docs/nginx/devflow-demo.conf.example`，使用占位 `server_name devflow.example.com`、占位前端 `dist` 路径，并将 `/api/` 反代到 `127.0.0.1:8080`；未写真实域名、服务器 IP 或证书私钥路径。
+  - README 新增 `Portfolio Demo 部署` 小节，链接生产演示部署指南、env 示例和 Nginx 示例，并继续明确 `docs/images/` 是真实截图、`docs/design/references/` 不是运行截图。
+  - 更新 `docs/deployment-plan.md`，把过期的“仓库还没有 env example”说明改为引用 `docs/env.example` 和新的 production demo 指南。
+- 部署风险 / 边界记录：
+  - 当前没有独立 `/api/health`，部署验收使用已有 `/api/dashboard/stats`。
+  - `application-prod.yml` 的数据库默认值仅适合示例；服务器部署必须用环境变量覆盖 `DB_PASSWORD` 等敏感配置。
+  - 前端生产环境依赖 Nginx `/api/` 反向代理；Vite proxy 仅用于本地开发。
+  - 该部署方案是 portfolio demo，不是 production SaaS；不新增登录、权限、SSE、自动 Git 提交或完整多 Agent Runtime。
+- 验证结果：
+  - `cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - 后续可选优化：做前端 bundle split / manual chunks，进一步降低大 chunk 警告。
+- 建议 commit message：`docs: add production demo deployment guide`
+
 ## 下一轮建议
 
-优先做“统一导航中文结构、全局设计 token 和公共组件骨架”，只覆盖 shell / nav / token / 基础组件，不同时重构五个页面。下一轮仍需保留当前未提交的 `AgentRunTraceView.vue` 和 `docs/design/` 内容，不回滚、不覆盖用户已有改动。
+建议下一步将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。

@@ -109,19 +109,19 @@ async function preparePage(page) {
 }
 
 async function prepareWorkbench(page) {
-  const editor = page.locator('.prompt-editor textarea').first()
+  const editor = page.locator('.task-editor textarea, .prompt-editor textarea').first()
   if (await editor.count()) {
     await editor.fill('为 DevFlow Copilot 生成一份可面试解释的 Agentic Coding Workflow Artifact，要求引用 Knowledge Base 并停在人工 Review。')
   }
   const runButton = page.locator('button').filter({ hasText: /运行|Workflow/ }).last()
   if (await runButton.count()) {
     await runButton.click()
-    await page.waitForSelector('.markdown-body.output', { timeout: 45000 })
+    await page.waitForSelector('.result-card .code-block, .markdown-body.output', { timeout: 45000 })
   }
 }
 
 async function preparePromptStudio(page) {
-  const testButton = page.locator('button').filter({ hasText: /试运行|运行模板|Test/ }).first()
+  const testButton = page.locator('button').filter({ hasText: /运行测试|试运行|运行模板|Test/ }).first()
   if (await testButton.count()) {
     await testButton.click()
     await page.waitForSelector('.test-result', { timeout: 45000 }).catch(() => undefined)

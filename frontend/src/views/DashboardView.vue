@@ -2,8 +2,69 @@
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Plus } from '@element-plus/icons-vue'
-import { fetchDashboardStats, fetchLogHistory, fetchPrompts } from '@/api/devflow'
-import type { DashboardStats, GenerationRecord, LogAnalysis, PromptTemplate } from '@/types/domain'
+import {
+  fetchAgentRunTrace,
+  fetchAgentRuns,
+  fetchDashboardStats,
+  fetchKnowledgeDocuments,
+  fetchKnowledgeReferences,
+  fetchLogHistory,
+  fetchPrompts,
+} from '@/api/devflow'
+import MetricCard from '@/components/MetricCard.vue'
+import ProviderBadge from '@/components/ProviderBadge.vue'
+import SectionCard from '@/components/SectionCard.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import type {
+  AgentRun,
+  AgentRunTrace,
+  DashboardStats,
+  GenerationRecord,
+  HumanReview,
+  KnowledgeDocument,
+  KnowledgeReference,
+  LogAnalysis,
+  PromptTemplate,
+  ToolCallRecord,
+} from '@/types/domain'
+
+type MetricTone = 'accent' | 'success' | 'warning' | 'danger' | 'running' | 'muted' | 'info'
+
+interface ProviderHealthRow {
+  provider: string
+  model: string
+  count: number
+  successRate: number
+  averageLatencyMs: number
+  status: 'SUCCESS' | 'READY_FOR_REVIEW' | 'FAILED'
+}
+
+interface TimelineItem {
+  id: string
+  tone: 'success' | 'warning' | 'danger' | 'running' | 'info'
+  title: string
+  detail: string
+  time?: string
+}
+
+// dashboard/stats does not expose tool-call totals, knowledge-hit totals,
+// provider health details, or review rows. This page derives those from the
+// existing trace/reference APIs; when fields are absent it shows zero or an
+// empty state instead of pretending they are backend statistics.
+const DASHBOARD_SAFE_FALLBACK = {
+  providerName: 'local-rule',
+  modelName: 'local-rule',
+  reviewer: '未分配',
+  emptyMetric: 0,
+} as const
+
+const WORKFLOW_STEPS = [
+  { key: 'Prompt', label: 'Prompt', desc: '模板渲染' },
+  { key: 'Provider', label: 'Provider', desc: '模型路由' },
+  { key: 'Tool Call', label: 'Tool Call', desc: '工具调用' },
+  { key: 'Trace', label: 'Trace', desc: '过程记录' },
+  { key: 'Human Review', label: 'Human Review', desc: '人工审核' },
+] as const
 
 const router = useRouter()
 const loading = shallowRef(false)
@@ -21,51 +82,167 @@ const stats = shallowRef<DashboardStats>({
 })
 const promptTemplates = shallowRef<PromptTemplate[]>([])
 const logHistory = shallowRef<LogAnalysis[]>([])
+const agentRuns = shallowRef<AgentRun[]>([])
+const traceSnapshots = shallowRef<AgentRunTrace[]>([])
+const knowledgeReferences = shallowRef<KnowledgeReference[]>([])
+const knowledgeDocuments = shallowRef<KnowledgeDocument[]>([])
 
-const recentRecords = computed(() => stats.value.recentGenerations)
-const reviewQueue = computed(() => recentRecords.value.filter(isReviewRecord))
-const confirmedCount = computed(() => recentRecords.value.filter((record) => record.confirmed || normalizeStatus(record.status) === 'CONFIRMED').length)
-const savedCount = computed(() => recentRecords.value.filter((record) => normalizeStatus(record.status) === 'SAVED').length)
-const failedCount = computed(() => recentRecords.value.filter((record) => normalizeStatus(record.status) === 'FAILED').length)
-const enabledPromptCount = computed(() => promptTemplates.value.filter((template) => template.enabled).length)
-const disabledPromptCount = computed(() => Math.max(promptTemplates.value.length - enabledPromptCount.value, 0))
+const recentRecords = computed(() => sortByTime(stats.value.recentGenerations).slice(0, 6))
+const generationById = computed(() => new Map(recentRecords.value.map((record) => [record.id, record])))
+const enabledPrompts = computed(() => promptTemplates.value.filter((template) => template.enabled).slice(0, 5))
+const recentAgentRuns = computed(() => sortByTime(agentRuns.value).slice(0, 5))
+const toolCalls = computed(() => traceSnapshots.value.flatMap((trace) => trace.toolCalls))
+const humanReviews = computed(() => traceSnapshots.value.flatMap((trace) => {
+  return trace.humanReviews.map((review) => ({
+    ...review,
+    run: trace.run,
+    record: trace.run.generationRecordId ? generationById.value.get(trace.run.generationRecordId) : undefined,
+  }))
+}))
 
-const metricItems = computed(() => [
-  { label: '今日运行数', value: stats.value.todayGenerationCount, code: 'Runs', tone: 'accent' },
-  { label: '成功率', value: `${stats.value.successRate || 0}%`, code: 'Success', tone: 'accent' },
-  { label: '人工确认数', value: stats.value.humanReviewCount || reviewQueue.value.length, code: 'Review', tone: 'warning' },
-  { label: '平均耗时', value: `${stats.value.averageLatencyMs || 0}ms`, code: 'Latency', tone: 'info' },
-  { label: 'Agent Run 数', value: stats.value.agentRunCount || 0, code: 'Agent Run', tone: 'accent' },
-])
-
-const workflowCards = [
-  { step: '01', title: '项目上下文', desc: '读取技术栈、目录、约束和当前需求，避免脱离真实工程。', meta: 'Project Context' },
-  { step: '02', title: 'Prompt 编排', desc: '按任务类型选择模板，渲染变量并保留版本。', meta: 'Prompt Template' },
-  { step: '03', title: 'Artifact 生成', desc: '输出需求拆解、代码计划、README、Commit Message 或修复 Prompt。', meta: 'AI Artifact' },
-  { step: '04', title: '人工 Review', desc: '生成结果必须进入待确认状态，不能绕过人工审查。', meta: 'Human Review' },
-  { step: '05', title: '历史沉淀', desc: '记录 provider、model、耗时、模板版本和确认状态，方便复盘。', meta: 'Trace Ledger' },
-]
-
-const typeDistribution = computed(() => {
-  const typeOrder = ['requirement-split', 'code-plan', 'log-analysis', 'fix-prompt', 'readme-generate', 'commit-message']
-  const total = Math.max(recentRecords.value.length, 1)
-  return typeOrder
-    .map((type) => {
-      const count = recentRecords.value.filter((record) => record.generationType === type).length
-      return { type, label: formatType(type), count, percent: Math.round((count / total) * 100) }
-    })
-    .filter((item) => item.count > 0)
+const kpiItems = computed(() => {
+  const items: Array<{ label: string; value: string | number; code: string; tone: MetricTone }> = [
+    {
+      label: '今日运行数',
+      value: stats.value.todayGenerationCount,
+      code: 'Runs',
+      tone: 'accent',
+    },
+    {
+      label: '成功率',
+      value: formatPercent(stats.value.successRate),
+      code: 'Success',
+      tone: stats.value.successRate >= 80 ? 'success' : 'warning',
+    },
+    {
+      label: '平均耗时',
+      value: formatDuration(stats.value.averageLatencyMs),
+      code: 'Latency',
+      tone: 'running',
+    },
+    {
+      label: '人工审核',
+      value: stats.value.humanReviewCount,
+      code: 'Human Review',
+      tone: 'warning',
+    },
+    {
+      label: '工具调用',
+      value: toolCalls.value.length || DASHBOARD_SAFE_FALLBACK.emptyMetric,
+      code: 'Tool Call',
+      tone: 'info',
+    },
+    {
+      label: '知识库命中',
+      value: knowledgeReferences.value.length || DASHBOARD_SAFE_FALLBACK.emptyMetric,
+      code: 'RAG Hits',
+      tone: 'success',
+    },
+  ]
+  return items
 })
 
-const promptStatusItems = computed(() => [
-  { label: '已启用模板', value: enabledPromptCount.value, tone: 'accent' },
-  { label: '停用模板', value: disabledPromptCount.value, tone: 'muted' },
-  { label: '默认模板', value: promptTemplates.value.filter((template) => template.isDefault).length, tone: 'warning' },
-])
+const providerHealthRows = computed<ProviderHealthRow[]>(() => {
+  const providers = new Map<string, GenerationRecord[]>()
+  recentRecords.value.forEach((record) => {
+    const provider = record.providerName || DASHBOARD_SAFE_FALLBACK.providerName
+    const current = providers.get(provider) || []
+    current.push(record)
+    providers.set(provider, current)
+  })
 
-const artifactRecords = computed(() => recentRecords.value.slice(0, 6))
-const traceRecords = computed(() => recentRecords.value.slice(0, 5))
-const latestLogs = computed(() => logHistory.value.slice(0, 3))
+  return Array.from(providers.entries()).map(([provider, records]) => {
+    const successCount = records.filter((record) => Boolean(record.success) || normalizeStatus(record.status) === 'CONFIRMED').length
+    const failedCount = records.filter((record) => normalizeStatus(record.status) === 'FAILED').length
+    const avgLatency = average(records.map((record) => record.costTimeMs || 0))
+    const model = records.find((record) => record.modelName)?.modelName || DASHBOARD_SAFE_FALLBACK.modelName
+    const successRate = records.length ? Math.round((successCount / records.length) * 1000) / 10 : 0
+    return {
+      provider,
+      model,
+      count: records.length,
+      successRate,
+      averageLatencyMs: avgLatency,
+      status: failedCount > successCount ? 'FAILED' : successRate >= 80 ? 'SUCCESS' : 'READY_FOR_REVIEW',
+    }
+  })
+})
+
+const topTools = computed(() => {
+  const counts = new Map<string, { count: number; latencyMs: number }>()
+  toolCalls.value.forEach((tool) => {
+    const current = counts.get(tool.toolName) || { count: 0, latencyMs: 0 }
+    current.count += 1
+    current.latencyMs += tool.latencyMs || 0
+    counts.set(tool.toolName, current)
+  })
+  return Array.from(counts.entries())
+    .map(([toolName, value]) => ({
+      toolName,
+      count: value.count,
+      averageLatencyMs: value.count ? Math.round(value.latencyMs / value.count) : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+})
+
+const latestKnowledgeRows = computed(() => {
+  if (knowledgeReferences.value.length > 0) {
+    return knowledgeReferences.value.slice(0, 5).map((reference) => ({
+      key: `ref-${reference.chunkId}`,
+      title: reference.documentTitle,
+      meta: `${reference.citationLabel} · score ${formatScore(reference.score)}`,
+      snippet: reference.snippet,
+      isReference: true,
+    }))
+  }
+
+  return knowledgeDocuments.value.slice(0, 4).map((document) => ({
+    key: `doc-${document.id}`,
+    title: document.title,
+    meta: `${document.sourceType} · ${document.chunkCount} chunks`,
+    snippet: '已有 Knowledge 文档，最近生成暂未返回引用命中。',
+    isReference: false,
+  }))
+})
+
+const timelineItems = computed<TimelineItem[]>(() => {
+  const generationEvents = recentRecords.value.map((record) => ({
+    id: `generation-${record.id}`,
+    tone: timelineTone(normalizeStatus(record.status)),
+    title: `${statusLabel(record.status, record.confirmed)}：${record.inputSummary || formatType(record.generationType)}`,
+    detail: `${record.providerName || DASHBOARD_SAFE_FALLBACK.providerName} · ${formatDuration(record.costTimeMs)}`,
+    time: record.createdAt,
+  }))
+
+  const reviewEvents = humanReviews.value.map((review) => ({
+    id: `review-${review.id}`,
+    tone: timelineTone(review.reviewStatus),
+    title: `${reviewStatusLabel(review.reviewStatus)}：${review.record?.inputSummary || review.run.title}`,
+    detail: `${review.reviewer || DASHBOARD_SAFE_FALLBACK.reviewer} · Human Review`,
+    time: review.updatedAt || review.createdAt,
+  }))
+
+  const knowledgeEvents = knowledgeReferences.value.slice(0, 3).map((reference) => ({
+    id: `knowledge-${reference.chunkId}`,
+    tone: 'info' as const,
+    title: `知识命中：${reference.documentTitle}`,
+    detail: `${reference.citationLabel} · RAG reference`,
+    time: undefined,
+  }))
+
+  const logEvents = logHistory.value.slice(0, 3).map((log) => ({
+    id: `log-${log.id}`,
+    tone: riskTone(log.riskLevel),
+    title: `日志诊断：${log.exceptionType}`,
+    detail: `${log.riskLevel} · Root Cause`,
+    time: log.createdAt,
+  }))
+
+  return [...generationEvents, ...reviewEvents, ...knowledgeEvents, ...logEvents]
+    .sort((a, b) => toTime(b.time) - toTime(a.time))
+    .slice(0, 8)
+})
 
 function normalizeStatus(status: string) {
   const map: Record<string, string> = {
@@ -76,32 +253,31 @@ function normalizeStatus(status: string) {
     Confirmed: 'CONFIRMED',
     Failed: 'FAILED',
   }
-  return map[status] || status
+  return map[status] || status.toUpperCase().replace(/\s+/g, '_')
 }
 
-function isReviewRecord(record: GenerationRecord) {
-  return normalizeStatus(record.status) === 'READY_FOR_REVIEW'
-}
-
-function statusClass(record: GenerationRecord) {
-  const status = normalizeStatus(record.status)
-  if (record.confirmed || status === 'CONFIRMED') return 'confirmed'
-  if (status === 'SAVED') return 'saved'
-  if (status === 'FAILED') return 'failed'
-  if (status === 'READY_FOR_REVIEW') return 'review'
-  return 'running'
-}
-
-function statusText(record: GenerationRecord) {
-  if (record.confirmed || normalizeStatus(record.status) === 'CONFIRMED') return '已确认'
-  const map: Record<string, string> = {
+function statusLabel(status: string, confirmed = false) {
+  if (confirmed || normalizeStatus(status) === 'CONFIRMED') return '已确认'
+  const labels: Record<string, string> = {
     DRAFT: '草稿',
-    GENERATING: '正在生成',
-    READY_FOR_REVIEW: '待人工确认',
+    GENERATING: '运行中',
+    READY_FOR_REVIEW: '待审核',
     SAVED: '已保存',
-    FAILED: '生成失败',
+    CONFIRMED: '已确认',
+    FAILED: '失败',
+    SUCCESS: '成功',
   }
-  return map[normalizeStatus(record.status)] || record.status
+  return labels[normalizeStatus(status)] || status
+}
+
+function reviewStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: '待审核',
+    SAVED: '已保存',
+    CONFIRMED: '已确认',
+    REJECTED: '已驳回',
+  }
+  return labels[normalizeStatus(status)] || status
 }
 
 function formatType(type: string) {
@@ -111,7 +287,7 @@ function formatType(type: string) {
     'readme-generate': 'README',
     'commit-message': 'Commit Message',
     'fix-prompt': '修复 Prompt',
-    'log-analysis': '日志分析',
+    'log-analysis': '日志诊断',
   }
   return map[type] || type
 }
@@ -120,21 +296,116 @@ function formatTime(value?: string) {
   return value ? value.replace('T', ' ').slice(0, 16) : '--'
 }
 
+function formatRelativeTime(value?: string) {
+  if (!value) return '刚刚'
+  const deltaMs = Date.now() - new Date(value).getTime()
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) return formatTime(value)
+  const minutes = Math.max(1, Math.round(deltaMs / 60000))
+  if (minutes < 60) return `${minutes}m 前`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h 前`
+  return formatTime(value).slice(5)
+}
+
+function formatDuration(value?: number) {
+  const ms = Math.max(value || 0, 0)
+  if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(ms >= 10000 ? 1 : 2)}s`
+  }
+  return `${ms}ms`
+}
+
+function formatPercent(value?: number) {
+  const normalized = Number.isFinite(value) ? Number(value) : 0
+  return `${Math.round(normalized * 10) / 10}%`
+}
+
+function formatScore(value?: number) {
+  if (!Number.isFinite(value)) return '0.00'
+  return Number(value).toFixed(2)
+}
+
+function countVariables(template: PromptTemplate) {
+  const matches = template.variables?.match(/[\w\u4e00-\u9fa5-]+/g)
+  return matches?.length || 0
+}
+
+function average(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+  if (!valid.length) return 0
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+}
+
+function toTime(value?: string) {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function sortByTime<T extends { createdAt?: string; id?: number }>(items: T[]) {
+  return [...items].sort((a, b) => {
+    const byTime = toTime(b.createdAt) - toTime(a.createdAt)
+    if (byTime !== 0) return byTime
+    return (b.id || 0) - (a.id || 0)
+  })
+}
+
+function timelineTone(status: string): TimelineItem['tone'] {
+  const normalized = normalizeStatus(status)
+  if (['CONFIRMED', 'SAVED', 'SUCCESS'].includes(normalized)) return 'success'
+  if (['FAILED', 'REJECTED', 'ERROR'].includes(normalized)) return 'danger'
+  if (['GENERATING', 'RUNNING'].includes(normalized)) return 'running'
+  return 'warning'
+}
+
+function riskTone(riskLevel: string): TimelineItem['tone'] {
+  const normalized = riskLevel.toUpperCase()
+  if (normalized.includes('HIGH')) return 'danger'
+  if (normalized.includes('MEDIUM')) return 'warning'
+  return 'info'
+}
+
+function toolStatus(tool: ToolCallRecord) {
+  return normalizeStatus(tool.status || 'SUCCESS')
+}
+
 function openRecord(record: GenerationRecord) {
   router.push({ path: '/history', query: { id: record.id } })
+}
+
+function openAgentRun(run: AgentRun) {
+  router.push({ path: '/agent-runs', query: { generationRecordId: run.generationRecordId } })
 }
 
 async function loadDashboard() {
   loading.value = true
   try {
-    const [statData, promptData, logData] = await Promise.all([
+    const [statData, promptData, logData, runData, documentData] = await Promise.all([
       fetchDashboardStats(),
       fetchPrompts(),
       fetchLogHistory(),
+      fetchAgentRuns(),
+      fetchKnowledgeDocuments(),
     ])
+
     stats.value = statData
     promptTemplates.value = promptData
     logHistory.value = logData
+    agentRuns.value = runData
+    knowledgeDocuments.value = documentData
+
+    const latestRuns = sortByTime(runData).slice(0, 4)
+    const traces = await Promise.all(
+      latestRuns.map((run) => fetchAgentRunTrace(run.id).catch(() => undefined)),
+    )
+    traceSnapshots.value = traces.filter((trace): trace is AgentRunTrace => Boolean(trace))
+
+    const referenceResults = await Promise.all(
+      sortByTime(statData.recentGenerations)
+        .slice(0, 4)
+        .map((record) => fetchKnowledgeReferences(record.id).catch(() => [] as KnowledgeReference[])),
+    )
+    knowledgeReferences.value = referenceResults.flat()
   } finally {
     loading.value = false
   }
@@ -144,480 +415,293 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <div class="dashboard command-center" v-loading="loading">
-    <header class="command-header">
-      <div class="command-title">
-        <span class="section-code mono">DEVFLOW / AI CODING COMMAND CENTER</span>
-        <h2>AI 编码工作流总控台</h2>
-        <p>项目上下文 → Prompt 模板 → Knowledge 检索 → Provider 生成 → Agent Trace → 人工 Review。</p>
-      </div>
-      <button class="primary-action" type="button" @click="router.push('/workbench')">
-        <el-icon><Plus /></el-icon>
-        新建工作流
-      </button>
-    </header>
-
-    <section class="status-strip" aria-label="工作流状态">
-      <article v-for="item in metricItems" :key="item.code" class="status-cell" :data-tone="item.tone">
-        <span class="mono">{{ item.code }}</span>
-        <strong>{{ item.value }}</strong>
-        <small>{{ item.label }}</small>
-      </article>
-    </section>
-
-    <section class="workflow-spine" aria-label="AI 编码主流程">
-      <article v-for="card in workflowCards" :key="card.step" class="workflow-card">
-        <span class="workflow-index mono">{{ card.step }}</span>
-        <div>
-          <strong>{{ card.title }}</strong>
-          <p>{{ card.desc }}</p>
-          <small class="mono">{{ card.meta }}</small>
-        </div>
-      </article>
-    </section>
-
-    <main class="overview-grid">
-      <section class="workspace-pane activity-pane" aria-labelledby="activity-title">
-        <header class="pane-header">
-          <div class="pane-title">
-            <span class="pane-mark" aria-hidden="true"></span>
-            <div>
-              <h3 id="activity-title">工作流活动流</h3>
-              <p class="mono">{{ recentRecords.length }} 条最近生成 Trace</p>
-            </div>
-          </div>
-          <button class="text-action" type="button" @click="router.push('/history')">
-            查看生成历史
+  <div class="dashboard dashboard-command" v-loading="loading">
+    <section class="dashboard-hero" aria-labelledby="dashboard-title">
+      <div class="hero-copy">
+        <span class="hero-kicker mono">DEVFLOW / AI CODING WORKFLOW</span>
+        <h1 id="dashboard-title">DevFlow Copilot</h1>
+        <h2>Agentic Coding 工作流控制台</h2>
+        <p>Prompt、Provider、Trace、Knowledge、Human Review</p>
+        <div class="hero-actions">
+          <button class="primary-action" type="button" @click="router.push('/workbench')">
+            <el-icon><Plus /></el-icon>
+            新建 Workflow
+          </button>
+          <button class="ghost-action" type="button" @click="router.push('/agent-runs')">
+            查看 Trace
             <el-icon><ArrowRight /></el-icon>
           </button>
-        </header>
-
-        <div class="activity-table-head" aria-hidden="true">
-          <span>Trace</span>
-          <span>Artifact</span>
-          <span>类型</span>
-          <span>Review</span>
-          <span>耗时</span>
         </div>
+      </div>
 
-        <div class="activity-list">
-          <div v-if="!recentRecords.length" class="empty-state">暂无生成记录，请先在 AI 工作台运行工作流。</div>
-          <button
-            v-for="(record, index) in recentRecords"
-            :key="record.id"
-            class="activity-row"
-            type="button"
-            @click="openRecord(record)"
-          >
-            <span class="trace-cell" :class="{ last: index === recentRecords.length - 1 }">
-              <span class="trace-node" :class="statusClass(record)"></span>
-            </span>
-            <span class="activity-main">
-              <strong>{{ record.inputSummary }}</strong>
-              <small class="mono">#{{ record.id }} · {{ record.providerName || 'local-rule' }} · {{ formatTime(record.createdAt) }}</small>
-            </span>
-            <span class="type-chip">{{ formatType(record.generationType) }}</span>
-            <span class="record-status" :class="statusClass(record)">
-              <i aria-hidden="true"></i>{{ statusText(record) }}
-            </span>
-            <span class="cost mono">{{ record.costTimeMs }}ms</span>
-          </button>
+      <div class="hero-workflow" aria-label="Agent Workflow Overview">
+        <div class="workflow-card-mini" v-for="(step, index) in WORKFLOW_STEPS" :key="step.key">
+          <span class="workflow-node mono">{{ index + 1 }}</span>
+          <strong>{{ step.label }}</strong>
+          <small>{{ step.desc }}</small>
         </div>
-      </section>
-
-      <aside class="side-stack">
-        <section class="workspace-pane review-pane" aria-labelledby="review-title">
-          <header class="pane-header compact">
-            <div class="pane-title">
-              <span class="pane-mark amber" aria-hidden="true"></span>
-              <div>
-                <h3 id="review-title">待人工确认队列</h3>
-                <p class="mono">{{ reviewQueue.length }} WAITING REVIEW</p>
-              </div>
-            </div>
-          </header>
-          <div class="compact-list">
-            <div v-if="!reviewQueue.length" class="mini-empty">当前没有待确认 Artifact</div>
-            <button v-for="record in reviewQueue.slice(0, 4)" :key="record.id" type="button" @click="openRecord(record)">
-              <strong>{{ record.inputSummary }}</strong>
-              <span class="mono">{{ formatType(record.generationType) }} · {{ record.costTimeMs }}ms</span>
-            </button>
-          </div>
-        </section>
-
-        <section class="workspace-pane trace-pane" aria-labelledby="trace-title">
-          <header class="pane-header compact">
-            <div class="pane-title">
-              <span class="pane-mark" aria-hidden="true"></span>
-          <div>
-            <h3 id="trace-title">最近 Agent Trace</h3>
-            <p class="mono">Provider / Model / Status</p>
-          </div>
-        </div>
-      </header>
-      <div class="trace-list">
-            <button v-for="record in traceRecords" :key="record.id" type="button" @click="router.push({ path: '/agent-runs', query: { generationRecordId: record.id } })">
-              <span class="trace-node" :class="statusClass(record)" aria-hidden="true"></span>
-              <span>
-                <strong>{{ record.modelName }}</strong>
-                <small>{{ record.providerName || 'local-rule' }} · {{ statusText(record) }}</small>
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section class="workspace-pane log-pane" aria-labelledby="log-title">
-          <header class="pane-header compact">
-            <div class="pane-title">
-              <span class="pane-mark red" aria-hidden="true"></span>
-              <div>
-                <h3 id="log-title">最近日志诊断</h3>
-                <p class="mono">Spring Boot Root Cause</p>
-              </div>
-            </div>
-          </header>
-          <div class="log-list">
-            <div v-if="!latestLogs.length" class="mini-empty">暂无日志诊断记录</div>
-            <article v-for="item in latestLogs" :key="item.id">
-              <strong>{{ item.exceptionType }}</strong>
-              <span>{{ item.riskLevel }} · {{ formatTime(item.createdAt) }}</span>
-            </article>
-          </div>
-        </section>
-      </aside>
-    </main>
-
-    <section class="insight-grid">
-      <article class="workspace-pane insight-card">
-        <header class="insight-header">
-          <div>
-            <h3>生成类型分布</h3>
-            <p class="mono">Artifact Type Mix</p>
-          </div>
-        </header>
-        <div class="distribution-list">
-          <div v-if="!typeDistribution.length" class="mini-empty">暂无类型分布</div>
-          <div v-for="item in typeDistribution" :key="item.type" class="distribution-row">
-            <span>{{ item.label }}</span>
-            <div class="meter"><i :style="{ width: `${item.percent}%` }"></i></div>
-            <strong class="mono">{{ item.count }}</strong>
-          </div>
-        </div>
-      </article>
-
-      <article class="workspace-pane insight-card">
-        <header class="insight-header">
-          <div>
-            <h3>Prompt 模板启用状态</h3>
-            <p class="mono">Reusable Prompt Orchestration</p>
-          </div>
-        </header>
-        <div class="prompt-status-grid">
-          <div v-for="item in promptStatusItems" :key="item.label" :data-tone="item.tone">
-            <strong>{{ item.value }}</strong>
-            <span>{{ item.label }}</span>
-          </div>
-        </div>
-      </article>
-
-      <article class="workspace-pane insight-card wide">
-        <header class="insight-header">
-          <div>
-            <h3>最近 Artifact 记录</h3>
-            <p class="mono">Reviewable Outputs</p>
-          </div>
-          <span class="mono summary-note">已确认 {{ confirmedCount }} · 已保存 {{ savedCount }} · 失败 {{ failedCount }}</span>
-        </header>
-        <div class="artifact-grid">
-          <button v-for="record in artifactRecords" :key="record.id" type="button" @click="openRecord(record)">
-            <span class="trace-node" :class="statusClass(record)" aria-hidden="true"></span>
-            <strong>{{ record.inputSummary }}</strong>
-            <small>{{ formatType(record.generationType) }} · {{ statusText(record) }}</small>
-          </button>
-        </div>
-      </article>
+      </div>
     </section>
+
+    <section class="kpi-grid" aria-label="Dashboard KPI">
+      <MetricCard
+        v-for="item in kpiItems"
+        :key="item.code"
+        :code="item.code"
+        :label="item.label"
+        :tone="item.tone"
+        :value="item.value"
+      />
+    </section>
+    <p class="data-source-note">
+      KPI 主统计来自 <span class="mono">GET /api/dashboard/stats</span>；Tool Call 与 RAG Hits 由现有 Trace / Knowledge 引用接口派生，缺失时显示 0。
+    </p>
+
+    <main class="dashboard-grid">
+      <SectionCard
+        class="recent-runs-card"
+        title="最近智能体运行"
+        subtitle="来自 agent-runs 与 dashboard/stats 的最近运行记录"
+        eyebrow="Agent Runs"
+      >
+        <template #actions>
+          <button class="section-link" type="button" @click="router.push('/agent-runs')">
+            查看全部
+            <el-icon><ArrowRight /></el-icon>
+          </button>
+        </template>
+
+        <div class="run-table-head" aria-hidden="true">
+          <span>运行 ID</span>
+          <span>Prompt</span>
+          <span>Provider</span>
+          <span>状态</span>
+          <span>耗时</span>
+          <span>审核人</span>
+        </div>
+        <div class="run-table">
+          <div v-if="!recentAgentRuns.length" class="empty-state">暂无 Agent Run 记录。</div>
+          <button
+            v-for="run in recentAgentRuns"
+            :key="run.id"
+            class="run-row"
+            type="button"
+            @click="openAgentRun(run)"
+          >
+            <span class="mono run-id">run_{{ run.id }}</span>
+            <span class="run-title">
+              <strong>{{ run.title }}</strong>
+              <small>{{ run.goal || generationById.get(run.generationRecordId || 0)?.inputSummary || 'Workflow audit record' }}</small>
+            </span>
+            <ProviderBadge :provider="run.providerName || DASHBOARD_SAFE_FALLBACK.providerName" :model="run.modelName" />
+            <StatusBadge :status="run.status" :label="statusLabel(run.status)" />
+            <span class="mono run-cost">{{ formatDuration(run.latencyMs) }}</span>
+            <span class="reviewer">{{ humanReviews.find((review) => review.run.id === run.id)?.reviewer || DASHBOARD_SAFE_FALLBACK.reviewer }}</span>
+          </button>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        class="prompts-card"
+        title="启用中的 Prompt 模板"
+        subtitle="只展示已启用模板，不写死使用次数"
+        eyebrow="Prompt Studio"
+      >
+        <template #actions>
+          <button class="section-link" type="button" @click="router.push('/prompts')">
+            查看全部
+            <el-icon><ArrowRight /></el-icon>
+          </button>
+        </template>
+
+        <div class="prompt-list">
+          <div v-if="!enabledPrompts.length" class="empty-state">暂无启用中的 Prompt 模板。</div>
+          <button v-for="template in enabledPrompts" :key="template.id" type="button" @click="router.push('/prompts')">
+            <span class="prompt-icon mono">{{ template.templateType.slice(0, 2).toUpperCase() }}</span>
+            <span>
+              <strong>{{ template.templateName }}</strong>
+              <small>{{ template.templateKey }} · {{ countVariables(template) }} variables</small>
+            </span>
+            <em class="mono">v{{ template.version }}</em>
+          </button>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="workflow-overview-card" title="Agent Workflow Overview" subtitle="Prompt -> Provider -> Tool Call -> Trace -> Human Review" eyebrow="Workflow">
+        <div class="overview-flow">
+          <div v-for="(step, index) in WORKFLOW_STEPS" :key="step.key" class="overview-step">
+            <span class="overview-step__node mono">{{ index + 1 }}</span>
+            <strong>{{ step.label }}</strong>
+            <small>{{ step.desc }}</small>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="provider-card" title="Provider 健康状态" subtitle="由最近生成记录聚合，不新增 Provider 健康接口" eyebrow="Provider Health">
+        <div class="provider-list">
+          <div v-if="!providerHealthRows.length" class="empty-state">暂无 Provider 调用记录。</div>
+          <article v-for="provider in providerHealthRows" :key="provider.provider" class="provider-row">
+            <div class="provider-row__top">
+              <ProviderBadge :provider="provider.provider" :model="provider.model" />
+              <StatusBadge :status="provider.status" :label="provider.status === 'SUCCESS' ? '正常' : provider.status === 'FAILED' ? '失败' : '待观察'" />
+            </div>
+            <div class="provider-metrics">
+              <span><strong>{{ formatDuration(provider.averageLatencyMs) }}</strong><small>平均耗时</small></span>
+              <span><strong>{{ formatPercent(provider.successRate) }}</strong><small>成功率</small></span>
+              <span><strong>{{ provider.count }}</strong><small>请求数</small></span>
+            </div>
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="review-card" title="最近人工审核" subtitle="来自 Agent Run Trace 的 Human Review 明细" eyebrow="Human Review">
+        <div class="review-list">
+          <div v-if="!humanReviews.length" class="empty-state">暂无 Human Review 明细。</div>
+          <article v-for="review in humanReviews.slice(0, 5)" :key="review.id" class="review-row">
+            <div>
+              <strong>{{ review.record?.inputSummary || review.run.title }}</strong>
+              <small>{{ review.reviewer || DASHBOARD_SAFE_FALLBACK.reviewer }} · {{ formatRelativeTime(review.updatedAt || review.createdAt) }}</small>
+            </div>
+            <StatusBadge :status="review.reviewStatus" :label="reviewStatusLabel(review.reviewStatus)" />
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="knowledge-card" title="最新知识引用" subtitle="优先展示 generation_knowledge_reference 命中" eyebrow="Knowledge / RAG">
+        <template #actions>
+          <button class="section-link" type="button" @click="router.push('/knowledge')">
+            查看知识库
+            <el-icon><ArrowRight /></el-icon>
+          </button>
+        </template>
+
+        <div class="knowledge-list">
+          <div v-if="!latestKnowledgeRows.length" class="empty-state">暂无 Knowledge 文档或引用。</div>
+          <article v-for="item in latestKnowledgeRows" :key="item.key" class="knowledge-row" :data-reference="item.isReference">
+            <span class="knowledge-marker"></span>
+            <div>
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.meta }}</small>
+              <p>{{ item.snippet }}</p>
+            </div>
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="timeline-card" title="最近活动时间线" subtitle="生成、审核、日志诊断与知识引用统一按时间展示" eyebrow="Recent Activity">
+        <div class="timeline-list">
+          <div v-if="!timelineItems.length" class="empty-state">暂无最近活动。</div>
+          <article v-for="item in timelineItems" :key="item.id" class="timeline-row" :data-tone="item.tone">
+            <span class="timeline-dot" aria-hidden="true"></span>
+            <div>
+              <strong>{{ item.title }}</strong>
+              <small>{{ item.detail }}</small>
+            </div>
+            <time>{{ formatRelativeTime(item.time) }}</time>
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="tools-card" title="高频工具" subtitle="来自最近 Agent Trace 的 Tool Call 记录" eyebrow="Top Used Tools">
+        <div class="tools-list">
+          <div v-if="!topTools.length" class="empty-state">暂无 Tool Call 记录。</div>
+          <article v-for="(tool, index) in topTools" :key="tool.toolName" class="tool-row">
+            <span class="mono">{{ index + 1 }}</span>
+            <strong>{{ tool.toolName }}</strong>
+            <div class="tool-meter"><i :style="{ width: `${Math.max(12, (tool.count / Math.max(topTools[0]?.count || 1, 1)) * 100)}%` }"></i></div>
+            <small class="mono">{{ tool.count }} 次 · {{ formatDuration(tool.averageLatencyMs) }}</small>
+          </article>
+        </div>
+      </SectionCard>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.command-center {
+.dashboard-command {
   display: grid;
   gap: 12px;
   width: 100%;
   min-width: 0;
 }
 
-.command-header {
+.dashboard-hero {
   min-width: 0;
-  min-height: 64px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 12px;
-  border-bottom: var(--border-subtle);
+  min-height: 130px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.98fr) minmax(420px, 0.82fr);
+  gap: 18px;
+  padding: 20px 22px;
+  border: var(--border-default);
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(135deg, rgba(124, 92, 255, 0.22), rgba(34, 211, 238, 0.05) 48%, rgba(59, 130, 246, 0.16)),
+    linear-gradient(90deg, rgba(11, 16, 32, 0.92), rgba(16, 24, 38, 0.96)),
+    var(--color-card);
+  overflow: hidden;
 }
 
-.command-title {
+.hero-copy {
   min-width: 0;
 }
 
-.section-code {
-  color: var(--color-accent);
+.hero-kicker {
+  display: block;
+  color: var(--color-accent-cyan);
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 
-.command-title h2 {
-  margin: 4px 0 0;
-  font-size: 22px;
-  font-weight: 650;
-  line-height: 1.22;
-  letter-spacing: -0.03em;
-}
-
-.command-title p {
-  margin: 7px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.status-strip {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+.hero-copy h1,
+.hero-copy h2,
+.hero-copy p {
   min-width: 0;
+  margin: 0;
 }
 
-.status-cell {
-  min-width: 0;
-  padding: 10px 11px;
-  border: var(--border-default);
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025), transparent 44%),
-    var(--color-surface);
-}
-
-.status-cell span,
-.status-cell strong,
-.status-cell small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.status-cell span {
-  color: var(--color-text-disabled);
-  font-size: 9px;
-  letter-spacing: 0.07em;
-}
-
-.status-cell strong {
-  margin-top: 7px;
+.hero-copy h1 {
+  margin-top: 6px;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.08;
+  font-weight: 720;
   color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: 22px;
-  line-height: 1;
 }
 
-.status-cell small {
-  margin-top: 5px;
+.hero-copy h2 {
+  margin-top: 7px;
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 520;
 }
 
-.status-cell[data-tone="warning"] strong {
-  color: var(--color-warning);
-}
-
-.status-cell[data-tone="info"] strong {
-  color: var(--color-info);
-}
-
-.workflow-spine {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  min-width: 0;
-  border: var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.workflow-card {
-  position: relative;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 8px;
-  padding: 12px 10px;
-  border-right: var(--border-subtle);
-}
-
-.workflow-card:last-child {
-  border-right: 0;
-}
-
-.workflow-card:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  right: -4px;
-  top: 50%;
-  z-index: 1;
-  width: 7px;
-  height: 7px;
-  border-top: var(--border-subtle);
-  border-right: var(--border-subtle);
-  background: var(--color-surface);
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.workflow-index {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-accent-border);
-  border-radius: 4px;
-  background: var(--color-accent-muted);
-  color: var(--color-accent);
-  font-size: 10px;
-}
-
-.workflow-card strong,
-.workflow-card p,
-.workflow-card small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.workflow-card strong {
+.hero-copy p {
+  margin-top: 10px;
+  color: var(--color-text-secondary);
   font-size: 13px;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.workflow-card p {
-  margin: 4px 0 0;
-  height: 34px;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  line-height: 17px;
-}
-
-.workflow-card small {
-  margin-top: 8px;
-  color: var(--color-text-disabled);
-  font-size: 9px;
-  white-space: nowrap;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
-  gap: 12px;
-  align-items: start;
-  min-width: 0;
-}
-
-.side-stack {
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-}
-
-.workspace-pane {
-  min-width: 0;
-  border: var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  overflow: hidden;
-}
-
-.pane-header {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  padding: 8px 12px;
-  border-bottom: var(--border-subtle);
-  background: var(--color-surface-raised);
-}
-
-.pane-header.compact {
-  min-height: 44px;
-}
-
-.pane-title {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-
-.pane-title > div {
-  min-width: 0;
-}
-
-.pane-title h3 {
-  margin: 0;
-  overflow: hidden;
-  font-size: 14px;
   line-height: 20px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.pane-title p {
-  margin: 0;
-  overflow: hidden;
-  color: var(--color-text-disabled);
-  font-size: 9px;
-  line-height: 14px;
-  letter-spacing: 0.06em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pane-mark {
-  width: 3px;
-  height: 24px;
-  flex: 0 0 auto;
-  border-radius: 1px;
-  background: var(--color-accent);
-}
-
-.pane-mark.amber {
-  background: var(--color-warning);
-}
-
-.pane-mark.red {
-  background: var(--color-error);
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .primary-action,
-.text-action {
-  flex: 0 0 auto;
+.ghost-action,
+.section-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   height: 30px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .primary-action {
@@ -633,26 +717,159 @@ onMounted(loadDashboard)
   background: var(--color-accent-hover);
 }
 
-.text-action {
-  padding: 0 8px;
-  border: 1px solid transparent;
-  background: transparent;
+.ghost-action,
+.section-link {
+  border: 1px solid var(--color-border);
+  background: rgba(8, 11, 18, 0.42);
   color: var(--color-text-secondary);
 }
 
-.text-action:hover {
-  border-color: var(--color-border);
-  background: var(--color-active-row);
+.ghost-action {
+  padding: 0 10px;
+}
+
+.section-link {
+  height: 26px;
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-running);
+}
+
+.ghost-action:hover,
+.section-link:hover {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-muted);
   color: var(--color-text-primary);
 }
 
-.activity-table-head {
-  height: 30px;
+.hero-workflow {
+  min-width: 0;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 104px 100px 64px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-content: center;
+  gap: 0;
+  padding: 12px;
+  border: 1px solid rgba(124, 92, 255, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(8, 11, 18, 0.44);
+}
+
+.workflow-card-mini {
+  position: relative;
+  min-width: 0;
+  padding: 8px 9px;
+  border-right: var(--border-subtle);
+}
+
+.workflow-card-mini:last-child {
+  border-right: 0;
+}
+
+.workflow-card-mini:not(:last-child)::after {
+  content: "->";
+  position: absolute;
+  right: -10px;
+  top: 17px;
+  z-index: 1;
+  color: var(--color-text-disabled);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.workflow-node,
+.overview-step__node {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-accent-border);
+  border-radius: 4px;
+  background: var(--color-accent-muted);
+  color: var(--color-accent-cyan);
+  font-size: 10px;
+}
+
+.workflow-card-mini strong,
+.workflow-card-mini small,
+.overview-step strong,
+.overview-step small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-card-mini strong {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.workflow-card-mini small {
+  margin-top: 4px;
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.data-source-note {
+  margin: -3px 0 0;
+  color: var(--color-text-disabled);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.data-source-note span {
+  color: var(--color-text-secondary);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.82fr) minmax(300px, 0.9fr);
+  grid-auto-flow: dense;
+  gap: 12px;
+  min-width: 0;
+  align-items: start;
+}
+
+.recent-runs-card {
+  grid-column: span 2;
+}
+
+.workflow-overview-card,
+.timeline-card,
+.tools-card {
+  grid-column: 3;
+}
+
+.provider-card,
+.review-card,
+.knowledge-card,
+.prompts-card {
+  min-height: 232px;
+}
+
+.run-table-head,
+.run-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1.35fr) minmax(168px, 0.72fr) 86px 66px 72px;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 9px;
+  min-width: 0;
+}
+
+.run-table-head {
+  height: 30px;
+  padding: 0 10px;
   border-bottom: var(--border-subtle);
   color: var(--color-text-disabled);
   font-family: var(--font-mono);
@@ -660,194 +877,96 @@ onMounted(loadDashboard)
   letter-spacing: 0.06em;
 }
 
-.activity-list {
+.run-table {
   min-width: 0;
 }
 
-.activity-row {
+.run-row {
   width: 100%;
-  min-width: 0;
-  min-height: 60px;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 104px 100px 64px;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  min-height: 54px;
+  padding: 8px 10px;
   border: 0;
   border-bottom: var(--border-subtle);
-  border-radius: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
   text-align: left;
 }
 
-.activity-row:last-child {
+.run-row:last-child {
   border-bottom: 0;
 }
 
-.activity-row:hover,
-.compact-list button:hover,
-.trace-list button:hover,
-.artifact-grid button:hover {
+.run-row:hover,
+.prompt-list button:hover {
   background: var(--color-active-row);
 }
 
-.trace-cell {
-  position: relative;
-  align-self: stretch;
-  display: grid;
-  place-items: center;
-  min-width: 0;
-}
-
-.trace-cell::after {
-  content: '';
-  position: absolute;
-  top: calc(50% + 5px);
-  bottom: -50%;
-  left: 50%;
-  width: 1px;
-  background: var(--color-border-subtle);
-}
-
-.trace-cell.last::after {
-  display: none;
-}
-
-.trace-node {
-  position: relative;
-  z-index: 1;
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  border: 1px solid var(--color-text-disabled);
-  border-radius: 2px;
-  background: var(--color-surface);
-}
-
-.trace-node.review {
-  border-color: var(--color-warning);
-  background: var(--color-warning);
-}
-
-.trace-node.confirmed {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-}
-
-.trace-node.saved {
-  border-color: var(--color-info);
-  background: var(--color-info);
-}
-
-.trace-node.failed {
-  border-color: var(--color-error);
-  background: var(--color-error);
-}
-
-.trace-node.running {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  animation: pulse 1.6s ease-in-out infinite;
-}
-
-.activity-main,
-.activity-main strong,
-.activity-main small {
-  display: block;
+.run-id,
+.run-cost,
+.reviewer,
+.run-title strong,
+.run-title small,
+.prompt-list strong,
+.prompt-list small,
+.prompt-list em {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.activity-main strong {
+.run-id,
+.run-cost {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+}
+
+.reviewer {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.run-title {
+  min-width: 0;
+}
+
+.run-title strong,
+.run-title small {
+  display: block;
+}
+
+.run-title strong {
   color: var(--color-text-primary);
   font-size: 12px;
-  font-weight: 550;
   line-height: 18px;
+  font-weight: 600;
 }
 
-.activity-main small {
-  margin-top: 3px;
+.run-title small {
+  margin-top: 2px;
   color: var(--color-text-disabled);
   font-size: 10px;
-  line-height: 15px;
 }
 
-.type-chip {
-  min-width: 0;
-  overflow: hidden;
-  padding: 4px 7px;
-  border: var(--border-subtle);
-  border-radius: 4px;
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.record-status {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.record-status i {
-  width: 5px;
-  height: 5px;
-  flex: 0 0 auto;
-  border-radius: 1px;
-  background: currentColor;
-}
-
-.record-status.review {
-  color: var(--color-warning);
-}
-
-.record-status.confirmed {
-  color: var(--color-accent);
-}
-
-.record-status.saved {
-  color: var(--color-info);
-}
-
-.record-status.failed {
-  color: var(--color-error);
-}
-
-.cost {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 10px;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compact-list,
-.trace-list,
-.log-list {
+.prompt-list,
+.provider-list,
+.review-list,
+.knowledge-list,
+.timeline-list,
+.tools-list {
   display: grid;
+  min-width: 0;
 }
 
-.compact-list button,
-.trace-list button {
+.prompt-list button {
   width: 100%;
-  min-width: 0;
   min-height: 48px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
   border: 0;
   border-bottom: var(--border-subtle);
   background: transparent;
@@ -856,322 +975,358 @@ onMounted(loadDashboard)
   text-align: left;
 }
 
-.compact-list button {
-  padding: 8px 11px;
-}
-
-.compact-list button:last-child,
-.trace-list button:last-child {
+.prompt-list button:last-child {
   border-bottom: 0;
 }
 
-.compact-list strong,
-.compact-list span,
-.trace-list strong,
-.trace-list small,
-.log-list strong,
-.log-list span {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compact-list strong {
-  font-size: 11px;
-}
-
-.compact-list span {
-  margin-top: 4px;
-  color: var(--color-text-disabled);
-  font-size: 9px;
-}
-
-.trace-list button {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 8px 11px;
-}
-
-.trace-list strong {
-  font-size: 11px;
-}
-
-.trace-list small {
-  margin-top: 4px;
-  color: var(--color-text-disabled);
-  font-size: 9px;
-}
-
-.log-list article {
-  min-width: 0;
-  padding: 9px 11px;
-  border-bottom: var(--border-subtle);
-}
-
-.log-list article:last-child {
-  border-bottom: 0;
-}
-
-.log-list strong {
-  font-size: 11px;
-}
-
-.log-list span {
-  margin-top: 4px;
-  color: var(--color-text-disabled);
-  font-size: 9px;
-}
-
-.mini-empty {
-  min-height: 52px;
+.prompt-icon {
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
+  border: 1px solid var(--color-accent-border);
+  border-radius: 4px;
+  background: var(--color-accent-muted);
+  color: var(--color-accent-cyan);
+  font-size: 9px;
+}
+
+.prompt-list strong,
+.prompt-list small {
+  display: block;
+}
+
+.prompt-list strong {
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+
+.prompt-list small,
+.prompt-list em {
   color: var(--color-text-disabled);
-  font-size: 11px;
+  font-size: 10px;
+  font-style: normal;
 }
 
-.insight-grid {
+.overview-flow {
   display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(220px, 0.8fr) minmax(0, 1.4fr);
-  gap: 12px;
+  gap: 8px;
+}
+
+.overview-step {
+  position: relative;
   min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border: var(--border-subtle);
+  border-radius: 6px;
+  background: var(--color-card-soft);
 }
 
-.insight-card {
-  min-height: 150px;
+.overview-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: 32px;
+  bottom: -10px;
+  width: 1px;
+  background: var(--color-accent-border);
 }
 
-.insight-header {
-  min-height: 44px;
+.overview-step strong {
+  align-self: end;
+  font-size: 12px;
+}
+
+.overview-step small {
+  grid-column: 2;
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.provider-list {
+  gap: 8px;
+}
+
+.provider-row {
+  min-width: 0;
+  padding: 10px;
+  border: var(--border-subtle);
+  border-radius: 6px;
+  background: var(--color-card-soft);
+}
+
+.provider-row__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  border-bottom: var(--border-subtle);
-  background: var(--color-surface-raised);
-}
-
-.insight-header h3,
-.insight-header p {
-  margin: 0;
-}
-
-.insight-header h3 {
-  font-size: 13px;
-}
-
-.insight-header p,
-.summary-note {
-  color: var(--color-text-disabled);
-  font-size: 9px;
-}
-
-.distribution-list {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-}
-
-.distribution-row {
-  display: grid;
-  grid-template-columns: 82px minmax(0, 1fr) 24px;
-  align-items: center;
-  gap: 8px;
   min-width: 0;
 }
 
-.distribution-row span,
-.distribution-row strong {
+.provider-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.provider-metrics span {
+  min-width: 0;
+  display: block;
+  padding-left: 8px;
+  border-left: var(--border-subtle);
+}
+
+.provider-metrics strong,
+.provider-metrics small {
+  display: block;
   min-width: 0;
   overflow: hidden;
-  color: var(--color-text-secondary);
-  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.distribution-row strong {
+.provider-metrics strong {
   color: var(--color-text-primary);
-  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 14px;
 }
 
-.meter {
+.provider-metrics small {
+  margin-top: 3px;
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.review-row,
+.knowledge-row,
+.timeline-row,
+.tool-row {
+  min-width: 0;
+  border-bottom: var(--border-subtle);
+}
+
+.review-row {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px;
+}
+
+.review-row:last-child,
+.knowledge-row:last-child,
+.timeline-row:last-child,
+.tool-row:last-child {
+  border-bottom: 0;
+}
+
+.review-row div,
+.knowledge-row div,
+.timeline-row div {
+  min-width: 0;
+}
+
+.review-row strong,
+.review-row small,
+.knowledge-row strong,
+.knowledge-row small,
+.knowledge-row p,
+.timeline-row strong,
+.timeline-row small,
+.timeline-row time,
+.tool-row strong,
+.tool-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-row strong,
+.knowledge-row strong,
+.timeline-row strong,
+.tool-row strong {
+  color: var(--color-text-primary);
+  font-size: 12px;
+}
+
+.review-row small,
+.knowledge-row small,
+.timeline-row small,
+.timeline-row time,
+.tool-row small {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.knowledge-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px 4px;
+}
+
+.knowledge-marker {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: var(--color-running);
+}
+
+.knowledge-row[data-reference="true"] .knowledge-marker {
+  background: var(--color-success);
+}
+
+.knowledge-row p {
+  margin: 5px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.timeline-row {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+}
+
+.timeline-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--timeline-color, var(--color-info));
+}
+
+.timeline-row[data-tone="success"] {
+  --timeline-color: var(--color-success);
+}
+
+.timeline-row[data-tone="warning"] {
+  --timeline-color: var(--color-warning);
+}
+
+.timeline-row[data-tone="danger"] {
+  --timeline-color: var(--color-error);
+}
+
+.timeline-row[data-tone="running"] {
+  --timeline-color: var(--color-running);
+}
+
+.tool-row {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 22px minmax(98px, 0.7fr) minmax(0, 1fr) 84px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+}
+
+.tool-row > span {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.tool-meter {
   height: 6px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--color-bg);
 }
 
-.meter i {
+.tool-meter i {
   display: block;
   height: 100%;
-  min-width: 4px;
   border-radius: inherit;
-  background: var(--color-accent);
+  background: linear-gradient(90deg, var(--color-accent), var(--color-running));
 }
 
-.prompt-status-grid {
+.empty-state {
+  min-height: 68px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  padding: 1px;
-  background: var(--color-border-subtle);
-}
-
-.prompt-status-grid div {
-  min-width: 0;
-  padding: 17px 10px;
-  background: var(--color-surface);
-  text-align: center;
-}
-
-.prompt-status-grid strong,
-.prompt-status-grid span {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.prompt-status-grid strong {
-  color: var(--color-accent);
-  font-family: var(--font-mono);
-  font-size: 22px;
-}
-
-.prompt-status-grid [data-tone="warning"] strong {
-  color: var(--color-warning);
-}
-
-.prompt-status-grid [data-tone="muted"] strong {
-  color: var(--color-info);
-}
-
-.prompt-status-grid span {
-  margin-top: 7px;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-}
-
-.artifact-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  padding: 1px;
-  background: var(--color-border-subtle);
-}
-
-.artifact-grid button {
-  min-width: 0;
-  min-height: 62px;
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  align-items: center;
-  column-gap: 8px;
-  padding: 9px;
-  border: 0;
-  background: var(--color-surface);
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.artifact-grid strong,
-.artifact-grid small {
-  grid-column: 2;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.artifact-grid strong {
-  align-self: end;
-  font-size: 11px;
-}
-
-.artifact-grid small {
-  align-self: start;
-  margin-top: 3px;
+  place-items: center;
   color: var(--color-text-disabled);
-  font-size: 9px;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  font-size: 12px;
 }
 
-.command-header > *,
-.status-strip > *,
-.workflow-spine > *,
-.workflow-card > *,
-.overview-grid > *,
-.pane-header > *,
-.pane-title > *,
-.activity-table-head > *,
-.activity-row > *,
-.insight-grid > *,
-.insight-header > *,
-.artifact-grid > * {
+.dashboard-hero > *,
+.hero-workflow > *,
+.kpi-grid > *,
+.dashboard-grid > *,
+.run-table-head > *,
+.run-row > *,
+.provider-row__top > *,
+.provider-metrics > *,
+.tool-row > * {
   min-width: 0;
 }
 
-@media (max-width: 1280px) {
-  .status-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workflow-spine {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workflow-card {
-    border-bottom: var(--border-subtle);
-  }
-
-  .overview-grid,
-  .insight-grid {
+@media (max-width: 1360px) {
+  .dashboard-hero {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-workflow {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.75fr);
+  }
+
+  .recent-runs-card,
+  .workflow-overview-card,
+  .timeline-card,
+  .tools-card {
+    grid-column: auto;
   }
 }
 
 @media (max-width: 980px) {
-  .command-header {
-    flex-direction: column;
-  }
-
-  .status-strip,
-  .workflow-spine {
+  .dashboard-grid,
+  .kpi-grid,
+  .hero-workflow {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .activity-table-head {
+  .workflow-card-mini {
+    border-right: 0;
+    border-bottom: var(--border-subtle);
+  }
+
+  .workflow-card-mini:last-child {
+    border-bottom: 0;
+  }
+
+  .workflow-card-mini:not(:last-child)::after,
+  .run-table-head {
     display: none;
   }
 
-  .activity-row {
-    grid-template-columns: 28px minmax(0, 1fr);
-    padding: 10px 12px;
-  }
-
-  .type-chip,
-  .record-status,
-  .cost {
-    grid-column: 2;
-    justify-content: flex-start;
-    text-align: left;
-  }
-
-  .artifact-grid {
+  .run-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .trace-node.running {
-    animation: none;
   }
 }
 </style>

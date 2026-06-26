@@ -1,24 +1,38 @@
 :root {
   color-scheme: dark;
-  --color-accent: #63b59f;
-  --color-accent-hover: #73c2ac;
-  --color-accent-muted: rgba(99, 181, 159, 0.14);
-  --color-accent-border: rgba(99, 181, 159, 0.46);
-  --color-bg: #101312;
-  --color-surface: #151918;
-  --color-surface-raised: #1a1f1d;
-  --color-active-row: #202724;
-  --color-border: #2b332f;
-  --color-border-subtle: #222925;
-  --color-text-primary: #e7ece9;
-  --color-text-secondary: #aab5af;
-  --color-text-disabled: #6f7b75;
-  --color-text-ghost: #4c5752;
-  --color-success: #63b59f;
-  --color-warning: #c7a45a;
-  --color-error: #d97a72;
-  --color-info: #7f9caa;
-  --color-running: #63b59f;
+  --color-bg: #080b12;
+  --color-bg-elevated: #0b1020;
+  --color-surface: #0d111a;
+  --color-surface-raised: #111827;
+  --color-card: #101826;
+  --color-card-soft: #0d1523;
+  --color-active-row: #16233a;
+  --color-border: #263246;
+  --color-border-subtle: #1b2638;
+  --color-accent: #7c5cff;
+  --color-accent-hover: #8b6dff;
+  --color-accent-muted: rgba(124, 92, 255, 0.16);
+  --color-accent-border: rgba(124, 92, 255, 0.48);
+  --color-accent-cyan: #22d3ee;
+  --color-text-primary: #f2f6ff;
+  --color-text-secondary: #a7b3c7;
+  --color-text-disabled: #738096;
+  --color-text-weak: #64748b;
+  --color-text-ghost: #4a5568;
+  --color-success: #35d486;
+  --color-success-muted: rgba(53, 212, 134, 0.13);
+  --color-success-border: rgba(53, 212, 134, 0.36);
+  --color-warning: #f6ad37;
+  --color-warning-muted: rgba(246, 173, 55, 0.14);
+  --color-warning-border: rgba(246, 173, 55, 0.38);
+  --color-error: #f87171;
+  --color-error-muted: rgba(248, 113, 113, 0.13);
+  --color-error-border: rgba(248, 113, 113, 0.38);
+  --color-info: #38bdf8;
+  --color-running: #3b82f6;
+  --color-running-muted: rgba(59, 130, 246, 0.14);
+  --color-running-border: rgba(59, 130, 246, 0.38);
+  --color-code-bg: #070b12;
   --font-mono: "Geist Mono", "JetBrains Mono", "Noto Sans Mono CJK SC", Consolas, monospace;
   --font-sans: "Geist", "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", sans-serif;
   --text-xs: 11px;
@@ -40,17 +54,23 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 6px;
+  --radius-card: 8px;
   --radius-pill: 100px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-pop: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.24);
+  --shadow-pop: 0 20px 48px rgba(0, 0, 0, 0.36);
+  --shadow-card: 0 16px 44px rgba(3, 7, 18, 0.22);
+  --card-padding: 12px;
+  --card-padding-sm: 10px 11px;
+  --sidebar-width: 220px;
+  --topbar-height: 48px;
   --border-default: 1px solid var(--color-border);
   --border-subtle: 1px solid var(--color-border-subtle);
 
   --bg: var(--color-bg);
-  --panel: var(--color-surface);
-  --panel-2: var(--color-surface-raised);
-  --panel-3: #121614;
+  --panel: var(--color-card);
+  --panel-2: var(--color-card-soft);
+  --panel-3: var(--color-code-bg);
   --border: var(--color-border);
   --border-soft: var(--color-border-subtle);
   --accent: var(--color-accent);
@@ -113,7 +133,7 @@ textarea {
 
 .shell {
   display: grid;
-  grid-template-columns: 205px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   width: 100%;
   min-height: 100vh;
   background: var(--color-bg);
@@ -123,10 +143,10 @@ textarea {
   position: sticky;
   top: 0;
   height: 100vh;
-  width: 205px;
+  width: var(--sidebar-width);
   padding: 14px 10px 12px;
   border-right: var(--border-subtle);
-  background: var(--color-surface);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.94), var(--color-surface));
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -202,7 +222,7 @@ textarea {
 .brand-copy span {
   color: var(--color-text-secondary);
   font-size: 9px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .workspace-label {
@@ -243,11 +263,27 @@ textarea {
 
 .nav-stack {
   display: grid;
+  gap: var(--space-3);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.nav-group {
+  display: grid;
   gap: var(--space-1);
+}
+
+.nav-group-label {
+  margin: 0 0 2px;
+  padding: 0 var(--space-3);
+  color: var(--color-text-weak);
+  font-size: 10px;
+  line-height: 18px;
 }
 
 .nav-item {
   height: 34px;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -258,6 +294,8 @@ textarea {
   border-left: 2px solid transparent;
   border-radius: 4px;
   font-size: 12px;
+  background: transparent;
+  cursor: pointer;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
 }
 
@@ -277,6 +315,12 @@ textarea {
   color: var(--color-text-primary);
   background: var(--color-active-row);
   border-left-color: var(--color-accent);
+}
+
+.nav-item.disabled {
+  color: var(--color-text-ghost);
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .sidebar-status {
@@ -326,13 +370,14 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 40px;
+  height: var(--topbar-height);
   min-width: 0;
   padding: 0 16px;
   border-bottom: var(--border-subtle);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(260px, 520px) minmax(320px, 1fr);
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3);
   background: var(--color-surface);
 }
 
@@ -382,7 +427,42 @@ p {
 .topbar-actions {
   min-width: 0;
   display: flex;
+  justify-content: flex-end;
   gap: var(--space-2);
+}
+
+.topbar-search {
+  min-width: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-disabled);
+  font-size: 12px;
+}
+
+.topbar-search span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-search kbd {
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-card-soft);
+  color: var(--color-text-weak);
+  font-size: 10px;
+  flex: 0 0 auto;
 }
 
 .system-chip {
@@ -396,6 +476,7 @@ p {
   color: var(--color-text-secondary);
   background: var(--color-bg);
   font-size: 10px;
+  white-space: nowrap;
 }
 
 .system-chip.accent {
@@ -413,8 +494,8 @@ p {
 .panel {
   border: var(--border-default);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: none;
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
 }
 
 .panel-header {

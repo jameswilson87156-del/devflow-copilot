@@ -2,6 +2,82 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Production Demo Readiness / 部署前安全收口
+
+- 做了什么：只做部署前安全收口，不继续改 UI 页面、不改后端核心业务逻辑、不新增接口或复杂功能。先审查 `README.md`、`docs/deployment-plan.md`、`docs/real-provider-verification.md`、`docs/design/references/README.md`、`docker-compose.yml`、后端配置、Vite 配置、`.gitignore`、截图脚本和当前 git status。
+- 当前部署风险点：没有独立 `/api/health`，部署验收使用已有 `/api/dashboard/stats`；生产 profile 的 DB 默认值只能作示例，服务器上必须通过环境变量覆盖；前端生产访问依赖 Nginx `/api/` 反向代理，Vite proxy 只用于本地开发；公开 demo 应默认使用 `local-rule` 或启用 fallback，避免 API Key 和成本风险。
+- 新增文档：`docs/deployment-production-demo.md`，覆盖项目定位、portfolio demo 边界、推荐 Nginx + Spring Boot 架构、服务器部署步骤、环境变量、安全说明和验收 checklist。明确不是 production SaaS、不自动改代码、不自动提交 Git、不实现完整多 Agent Runtime，Knowledge Base 仍是关键词检索 / RAG 引用。
+- 新增示例：`docs/env.example` 只包含占位符；`docs/nginx/devflow-demo.conf.example` 使用 `devflow.example.com`、占位 `dist` 路径，并将 `/api/` 反代到 `127.0.0.1:8080`。没有真实域名、服务器 IP、证书路径或 API Key。
+- README / 既有部署文档：README 新增 `Portfolio Demo 部署` 小节并链接 production demo 指南、env 示例和 Nginx 示例；`docs/deployment-plan.md` 修正过期的 `.env.example` 说明，改为引用 `docs/env.example`。
+- 验证证据：`cd backend && mvn test` 成功，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+- 下一步：建议提交本轮部署文档，然后将 `feat/frontend-design-system-foundation` 合并到 `main` 或创建 PR 后合并。部署服务器时只在服务器环境变量或 Secret Manager 配置真实 Provider Key，不写入仓库。
+
+## 2026-06-26 - Codex - 真实浏览器截图与 README 收口
+
+- 做了什么：只做前端中文版 UI 重设计收口，不继续大改页面、不改后端核心逻辑、不新增接口。复查 `scripts/capture-portfolio-screenshots.mjs`、README 截图区域、`docs/images/`、`docs/design/references/README.md` 和前端路由，确认截图脚本覆盖 Dashboard、Workbench、Agent Run Trace、Knowledge Base、Prompt Studio，并额外覆盖 Human Review Trace。
+- 服务与截图：本机后端 `http://127.0.0.1:18081/api/dashboard/stats` 可访问，前端 `http://127.0.0.1:5174` 可访问。执行 `cd frontend && npm run screenshots:portfolio` 成功，通过真实后端 API 预热 demo Agent Workflow，再从真实浏览器页面输出截图到 `docs/images/`。
+- 实际截图文件：`docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/knowledge-base-rag.png`、`docs/images/prompt-studio.png`、`docs/images/human-review-trace-detail.png`，均为 1440x1040 PNG。本轮没有使用 `docs/design/references/` 图片作为 README 主截图。
+- README：顶部截图展示区补充 Prompt Studio 和 Human Review Trace；项目截图小节明确 `docs/images/` 是真实浏览器运行截图，`docs/design/references/` 是 AI-generated visual references，不是 runtime screenshots；核心功能文案补充 Prompt Studio、Tool Call、Generation Trace / Human Review 关联，并继续保持 Knowledge Base 关键词检索、非完整多 Agent Runtime、非自动改代码系统等边界。
+- 截图脚本：本轮没有修改 `scripts/capture-portfolio-screenshots.mjs`。脚本现有等待选择器仍可进入 `/`、`/workbench`、`/agent-runs`、`/knowledge`、`/prompts` 并完成截图。
+- 验证证据：`cd backend && mvn test` 成功，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。后续可做 bundle split / manual chunks 优化。
+- 下一步：建议将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续检查不提交 API Key、`.env`、`node_modules`、`dist`、`target` 或日志文件。
+
+## 2026-06-26 - Codex - Prompt Studio 高保真中文版重构
+
+- 做了什么：只重构 Prompt Studio，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Knowledge Base。基于 `docs/design/references/05-prompt-studio-ai-concept-cn.png` 的提示词工作室结构，把 `PromptTemplatesView.vue` 改成左 Prompt 模板列表、中 Prompt 编辑器与渲染预览、右测试运行预览与执行详情、底部可观测性的真实 Prompt 管理页。
+- 页面内容：顶部展示 `Prompt 模板 -> 变量配置 -> 渲染预览 -> 测试运行 -> Trace / Human Review` 链路；左侧包含搜索、新建模板、类型筛选、状态筛选和模板列表；中间包含模板基础信息、System/User Prompt 派生预览、模板内容编辑、变量配置、原始 / 渲染 / JSON 预览、保存模板、保存版本和运行测试；右侧包含测试运行状态、Provider、Model、Token、Trace ID、原始响应、Human Review 和 Provider 配置提示；底部包含版本历史、测试结果、Prompt 校验、最近运行和变更记录。
+- 保留真实功能：保留 `GET /api/prompts` 模板列表、`POST /api/prompts` 新建模板、`PUT /api/prompts/{id}` 保存模板并由后端递增当前版本、已有 `POST /api/ai/{type}` 试运行；`log-analysis` 仍可编辑保存，但因当前 `generateAi` 没有对应端点，页面禁用试运行而不是新增假接口。
+- 使用真实接口：`GET /api/projects`、`GET /api/prompts`、`POST /api/prompts`、`PUT /api/prompts/{id}`、`GET /api/generations`、`POST /api/ai/requirement-split|code-plan|readme-generate|commit-message|fix-prompt`、`GET /api/generation-traces?generationRecordId={id}`、`GET /api/agent-runs?generationRecordId={id}`、`GET /api/agent-runs/{id}/trace`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`、`MetricCard`。本轮没有新增公共组件。
+- fallback / 派生边界：后端没有独立版本历史表、PromptOps 评测后端、单独渲染预览 API、模板级使用次数 / 最近运行字段、独立 Prompt 校验记录；页面只展示当前版本记录、前端静态校验、从真实 Generation Record 派生的统计或空状态。`System Prompt` / `User Prompt` 没有独立字段，仅从 `templateContent` 标题片段安全推导，缺失时显示单字段说明。API Key 不在前端展示。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Prompt Studio 路径仍是 `/prompts`，等待选择器 `.templates-page` 仍存在；本轮仅扩展试运行按钮匹配为 `运行测试|试运行|运行模板|Test`。未重新生成 `docs/images/` 作品集截图，建议下一轮统一截图并更新 README。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 下一步：建议做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base / Prompt Studio 等真实运行截图，并更新 README 中的作品集截图引用。
+
+## 2026-06-26 - Codex - Knowledge Base 高保真中文版重构
+
+- 做了什么：只重构 Knowledge Base，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Prompt Studio。基于 `docs/design/references/04-knowledge-base-ai-concept-cn.png` 的三栏知识管理结构，把 `KnowledgeBaseView.vue` 改成左文档列表、中详情与 Chunk、右检索结果与审核、底部可观测性的真实 RAG 引用管理页。
+- 页面内容：顶部展示 `文档 -> Chunk -> 检索 -> 引用 -> 生成 -> Trace` 链路；左侧包含搜索、新增文档、来源筛选、状态筛选和文档列表；中间包含文档详情、Chunk 切片、命中结果、检索时间线、文档信息、访问控制和关键词检索；右侧包含检索结果详情、引用预览、生成使用情况、关联 Agent Run 和知识发布审核空状态；底部包含检索历史、引用历史、生成知识引用和索引日志。
+- 保留真实功能：保留新增知识文档并后端切片、加载知识文档、加载文档 Chunk、关键词 / 简单相似度检索；文档选择后会刷新真实 Chunk 并用当前 query 重新检索。
+- 使用真实接口：`GET /api/knowledge/documents`、`POST /api/knowledge/documents`、`GET /api/knowledge/documents/{id}/chunks`、`POST /api/knowledge/search`、`GET /api/knowledge/references?generationRecordId={id}`、`GET /api/generations`、`GET /api/agent-runs?generationRecordId={id}`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`、`MetricCard`。本轮没有新增公共组件。
+- fallback / 派生边界：后端未提供文档发布状态、Chunk Token 数、检索日志持久化、索引耗时、知识发布审核人 / 意见、Trace ID 字段；页面从 `metadata status`、`chunkCount`、真实 generation references 和 Agent Run 记录安全派生，缺失时显示 `未记录`、`未关联 Trace` 或空状态。`embeddingModel / embeddingVector` 仅作为扩展点展示，没有写成向量数据库已启用。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Knowledge Base 路径仍是 `/knowledge`，等待选择器 `.knowledge-page` 仍存在，本轮无需调整。未重新生成 `docs/images/` 作品集截图；后续建议统一截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。使用本机 Chrome 对 `http://127.0.0.1:5174/knowledge` 做过 DOM 烟测，确认标题、左侧、中间、右侧和底部区域存在；临时验证截图已删除，没有纳入本轮变更。
+- 下一步：建议二选一：先做统一截图任务重新生成 Dashboard / Workbench / Knowledge Base 等真实运行截图，或单独做 Prompt Studio 高保真中文版重构；仍不要同时重构多个页面。
+
+## 2026-06-26 - Codex - Workbench 高保真中文版重构
+
+- 做了什么：只重构 Workbench，不改后端、不新增接口、不改 Dashboard、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/02-workbench-ai-concept-cn.png` 的三栏工作台结构，把 `WorkbenchView.vue` 改成左任务配置、中生成结果、右执行详情、底部追踪与日志的真实 AI Coding 工作台。
+- 保留真实功能：保留 `运行工作流`、`保存记录`、`标记已审核 / 确认`；保留项目选择、Prompt 模板选择、知识检索 query、补充上下文输入和生成历史刷新；后端状态仍沿用 `READY_FOR_REVIEW -> SAVED -> CONFIRMED`。
+- 使用真实接口：`GET /api/projects`、`GET /api/generations`、`GET /api/prompts`、`POST /api/ai/*`、`POST /api/generations/{id}/save`、`POST /api/generations/{id}/confirm`、`GET /api/generation-traces?generationRecordId={id}`、`GET /api/agent-runs?generationRecordId={id}`、`GET /api/agent-runs/{id}/trace`、`GET /api/knowledge/references?generationRecordId={id}`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`。本轮没有新增公共组件。
+- fallback / 派生边界：任务标题、优先级、分支、上下文文件、关注区域、语言和约束是本页 UI-only 配置展示，后端未提供持久字段；diff、files_created、files_changed、tests_added、dependencies 只从响应 JSON 或文本安全派生，缺失时显示空状态；日志区只展示真实 `errorMessage`，无错误时显示空状态。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Workbench 路径仍是 `/workbench`，等待选择器已更新为兼容新结果区 `.result-card .code-block`；本轮未重新生成 `docs/images/` 真实截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。待收尾执行 `git diff --check`、`git status --short` 和敏感文件/密钥检查。
+- 下一步：建议先做统一截图任务重新生成 Dashboard / Workbench 真实运行截图，或单独重构 Knowledge Base；仍不要同时重构多个页面。
+
+## 2026-06-26 - Codex - Dashboard 高保真中文版重构
+
+- 做了什么：只重构 Dashboard，不改后端、不新增接口、不改 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/01-dashboard-ai-concept-cn.png` 的信息层级，把 `DashboardView.vue` 改成高密度深色 DevFlow Copilot 仪表盘。
+- 页面内容：新增 DevFlow Copilot Hero、Agentic Coding 工作流控制台副标题、Prompt / Provider / Trace / Knowledge / Human Review 说明、小型 Agent Workflow Overview、六项 KPI、最近智能体运行、启用中的 Prompt 模板、Provider 健康状态、最近人工审核、最新知识引用、最近活动时间线和高频工具。
+- 复用组件：`MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`。本轮没有新增公共组件，也没有改其他页面。
+- 使用真实接口：`GET /api/dashboard/stats`、`GET /api/prompts`、`GET /api/logs/history`、`GET /api/agent-runs`、`GET /api/agent-runs/{id}/trace`、`GET /api/knowledge/documents`、`GET /api/knowledge/references?generationRecordId={id}`。
+- fallback / 派生边界：`dashboard/stats` 不直接提供工具调用总数、知识命中总数、Provider 健康明细或 Human Review 列表；Dashboard 只从现有 Trace / Knowledge 引用接口派生这些展示。缺失 provider/model/reviewer 时使用 `local-rule`、`local-rule`、`未分配` 作为安全展示 fallback；缺失 Tool Call 或 Knowledge 引用时显示 0 或空状态，不伪造成后端统计。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Dashboard 路径仍是 `/`，等待选择器仍是 `.dashboard`，本轮没有破坏脚本选择器；未重新生成所有截图，建议下一轮或统一截图任务再跑作品集截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。待收尾执行 `git diff --check`、`git status --short` 和敏感文件/密钥检查。
+- 下一步：建议单独做 Workbench 高保真重构，对齐 `docs/design/references/02-workbench-ai-concept-cn.png`，仍保持不改后端、不新增假接口。
+
+## 2026-06-26 - Codex - 前端设计系统第一阶段地基
+
+- 做了什么：只做前端基础设施，不改后端、不新增接口、不重构 5 个页面。先审查 router、layout、components、views、api、types、theme.css 和 5 张 `docs/design/references/` AI concept images，然后落地设计系统地基。
+- 导航：`frontend/src/router/index.ts` 的导航文案统一为中文分组：工作流、可观测性、知识与引用、治理与审核、配置。已有真实路由继续保留；`工具调用`、`人工审核`、`Provider`、`设置` 作为 disabled 导航项，不创建假页面。
+- Tokens：全局 design tokens 集中在 `frontend/src/styles/theme.css`，覆盖深色背景、卡片背景、蓝紫主色、成功/待审核/失败/运行中状态色、文本色、圆角、阴影、间距、字号、sidebar 宽度和 topbar 高度。
+- 组件：新增 `SidebarNav.vue`、`TopBar.vue`、`MetricCard.vue`、`SectionCard.vue`、`StatusBadge.vue`、`ProviderBadge.vue`、`CodeBlock.vue`。本轮只把 `SidebarNav` / `TopBar` 接入 `DevFlowLayout`，把 `MetricCard` / `SectionCard` 轻量接入 `DashboardView`。
+- 保留边界：未改 `WorkbenchView`、`AgentRunTraceView`、`KnowledgeBaseView`、`PromptTemplatesView` 的业务结构；未新增假接口；未把 `docs/design/references/` 当真实截图；未提交 API Key。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。`git diff --check` 退出码 0，仅有 LF/CRLF 提示；敏感内容扫描只命中文档占位符，没有真实 API Key。后端本轮未修改，未运行 `mvn test`。
+- 下一步：建议下一轮只重构 Dashboard，对齐 `01-dashboard-ai-concept-cn.png` 的 Hero、KPI、运行、Prompt、Trace、Provider、Knowledge、Tool Call 和 Human Review 信息层级。
+
 ## 2026-06-26 - Codex - 前端 UI 中文版重构前审查
 
 - 做了什么：按附件要求先审查，不直接大改。已阅读 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`README.md`、`docs/real-provider-verification.md`、`docs/resume-evidence.md`、`docs/api.md`、`docs/architecture.md`、根目录 `DESIGN.md`，并检查前端路由、API 封装、类型、布局、页面和截图脚本。
