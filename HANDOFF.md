@@ -2,6 +2,17 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Workbench 高保真中文版重构
+
+- 做了什么：只重构 Workbench，不改后端、不新增接口、不改 Dashboard、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/02-workbench-ai-concept-cn.png` 的三栏工作台结构，把 `WorkbenchView.vue` 改成左任务配置、中生成结果、右执行详情、底部追踪与日志的真实 AI Coding 工作台。
+- 保留真实功能：保留 `运行工作流`、`保存记录`、`标记已审核 / 确认`；保留项目选择、Prompt 模板选择、知识检索 query、补充上下文输入和生成历史刷新；后端状态仍沿用 `READY_FOR_REVIEW -> SAVED -> CONFIRMED`。
+- 使用真实接口：`GET /api/projects`、`GET /api/generations`、`GET /api/prompts`、`POST /api/ai/*`、`POST /api/generations/{id}/save`、`POST /api/generations/{id}/confirm`、`GET /api/generation-traces?generationRecordId={id}`、`GET /api/agent-runs?generationRecordId={id}`、`GET /api/agent-runs/{id}/trace`、`GET /api/knowledge/references?generationRecordId={id}`。
+- 复用组件：`SectionCard`、`StatusBadge`、`ProviderBadge`、`CodeBlock`。本轮没有新增公共组件。
+- fallback / 派生边界：任务标题、优先级、分支、上下文文件、关注区域、语言和约束是本页 UI-only 配置展示，后端未提供持久字段；diff、files_created、files_changed、tests_added、dependencies 只从响应 JSON 或文本安全派生，缺失时显示空状态；日志区只展示真实 `errorMessage`，无错误时显示空状态。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Workbench 路径仍是 `/workbench`，等待选择器已更新为兼容新结果区 `.result-card .code-block`；本轮未重新生成 `docs/images/` 真实截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。待收尾执行 `git diff --check`、`git status --short` 和敏感文件/密钥检查。
+- 下一步：建议先做统一截图任务重新生成 Dashboard / Workbench 真实运行截图，或单独重构 Knowledge Base；仍不要同时重构多个页面。
+
 ## 2026-06-26 - Codex - Dashboard 高保真中文版重构
 
 - 做了什么：只重构 Dashboard，不改后端、不新增接口、不改 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/01-dashboard-ai-concept-cn.png` 的信息层级，把 `DashboardView.vue` 改成高密度深色 DevFlow Copilot 仪表盘。

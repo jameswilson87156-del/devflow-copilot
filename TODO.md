@@ -313,6 +313,48 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
 - 建议 commit message：`feat: redesign dashboard with devflow design system`
 
+## P1-10：Workbench 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/02-workbench-ai-concept-cn.png`，只重构 Workbench，不改后端、不改 Dashboard、Agent Run Trace、Knowledge Base、Prompt Studio。
+- 涉及文件：`frontend/src/views/WorkbenchView.vue`、`scripts/capture-portfolio-screenshots.mjs`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Workbench 改为左侧任务配置区、中间生成结果区、右侧执行详情区、底部追踪与日志区。
+  - 左侧保留任务类型、项目、Prompt 模板、任务输入、补充上下文、知识检索等真实生成字段，并补充本页 UI-only 的任务标题、优先级、分支、上下文文件、关注区域、语言和约束展示。
+  - 中间保留生成结果展示，新增预览 / 差异 / 原始 / JSON 视图；无真实 diff 时显示空状态，不伪造 diff。
+  - 中间新增结构化响应和建议文件区；仅从响应 JSON 或响应文本安全派生，缺失字段显示 0 或空状态。
+  - 右侧新增执行详情、知识引用、人工审核、工具调用摘要。
+  - 底部新增生成追踪、工具调用、状态历史和日志，优先展示真实 Agent Run Trace / Generation Trace / Tool Call 数据。
+  - 截图脚本 Workbench 等待选择器更新为兼容新结果区。
+- 保留真实功能：
+  - `运行工作流`
+  - `保存记录`
+  - `标记已审核 / 确认`
+  - 项目选择、Prompt 模板选择、知识检索 query、补充上下文输入和生成历史刷新
+- 真实接口：
+  - `GET /api/projects`
+  - `GET /api/generations`
+  - `GET /api/prompts`
+  - `POST /api/ai/*`
+  - `POST /api/generations/{id}/save`
+  - `POST /api/generations/{id}/confirm`
+  - `GET /api/generation-traces?generationRecordId={id}`
+  - `GET /api/agent-runs?generationRecordId={id}`
+  - `GET /api/agent-runs/{id}/trace`
+  - `GET /api/knowledge/references?generationRecordId={id}`
+- fallback / 派生说明：
+  - 后端未提供任务标题、优先级、分支、上下文文件、关注区域、语言等持久字段；本轮仅作为 Workbench 本页配置展示，不写入后端。
+  - 后端不保证返回 diff、files_created、files_changed、tests_added、dependencies；页面只从响应 JSON 或文本安全派生，缺失时显示空状态。
+  - Provider 降级策略文案来自既有 Provider Router 行为说明，不伪造成独立健康接口。
+  - 日志区只展示真实 `errorMessage`；无错误时显示空状态。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未新增自动改代码、自动 Git 提交、SSE、登录权限。
+  - 未重新生成 `docs/images/` 真实截图；建议下一轮做统一截图任务，或单独重构 Knowledge Base。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign workbench with devflow design system`
+
 ## 下一轮建议
 
-优先单独重构 Workbench，让工作台对齐 `docs/design/references/02-workbench-ai-concept-cn.png` 的三栏工作流、Prompt 输入、Provider 选择、生成结果、Trace 可解释过程和 Human Review 停点。下一轮仍不要同时重构 Agent Run Trace、Knowledge Base、Prompt Studio。
+建议下一轮二选一：优先做统一截图任务，重新生成 Dashboard / Workbench 等真实运行截图；或单独重构 Knowledge Base，对齐 `docs/design/references/04-knowledge-base-ai-concept-cn.png`。下一轮仍不要同时重构 Agent Run Trace、Knowledge Base、Prompt Studio 多个页面。
