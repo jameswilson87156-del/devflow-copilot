@@ -4,9 +4,9 @@
 
 ## 项目当前定位
 
-面向大三实习简历的 **AI Coding 工作流控制台 / Java 后端工程化项目**。
+面向大三实习简历的 **Agentic Coding Workflow 控制台 / Java 后端工程化项目**。
 
-核心价值在于把 AI Coding 行为工程化：Prompt 模板渲染、Provider 抽象与降级、生成历史持久化、状态机约束、人工确认闭环，而不是聊天套壳或完整生产级大模型平台。
+核心价值在于把 AI Coding 行为工程化：Prompt 模板渲染、Provider 抽象与降级、Generation Trace、Agent Run Trace、Knowledge Base 引用、生成历史持久化、状态机约束、人工确认闭环，而不是聊天套壳或完整生产级大模型平台。
 
 目标投递方向：Java 后端实习、AI 工具开发、Java + AI 应用。
 
@@ -22,9 +22,12 @@
 - **Generation 状态机**：`GENERATING → READY_FOR_REVIEW → SAVED → CONFIRMED`，非法流转返回 HTTP 409
 - **Prompt 模板变量渲染**：正则替换 `{{variable}}`，缺填报 `TemplateRenderException`，版本写入 `generation_record`
 - **Generation Provider 抽象**：`LocalRuleGenerationProvider`（无 Key 演示）+ `OpenAiCompatibleGenerationProvider`（真实 HTTP 调用 `/v1/chat/completions`）+ `GenerationProviderRouter`（含 fallback 逻辑）
+- **Generation Trace**：`generation_trace` 记录 promptVersion、inputVariables、renderedPrompt 摘要、provider、model、status、latencyMs 和 errorMessage，不保存 API Key
+- **Agent Run Trace**：`agent_run`、`agent_step`、`tool_call_record`、`human_review` 记录一次生成的任务拆解、Prompt 渲染、Knowledge 检索、Provider 工具调用和人工确认状态
+- **轻量 Knowledge Base / RAG 引用**：支持创建文档、自动切片、关键词/简单相似度检索，并在生成响应中返回命中的 chunk 引用；embedding 字段仅为后续扩展预留
 - **日志诊断规则引擎**：识别8种 Java/Spring Boot 常见异常关键词，输出排查步骤和修复 Prompt（规则引擎，不是 LLM 推理）
 - **DTO 校验 + GlobalExceptionHandler**，统一 `ApiResponse` 响应结构
-- **18 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 18, Failures: 0, Errors: 0, Skipped: 0`
+- **20 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`
 - **ai_task 最小只读查询入口**：`GET /api/tasks?projectId={projectId}`，复用 `AiTaskMapper`，按 ID 倒序返回指定项目任务列表
 - **Vue 3 + TypeScript + Element Plus** 前端，WorkbenchView 三栏布局，状态机按钮联动，`npm run build` 通过
 - **截图**：`docs/images/` 下5张标准截图 + 5张1920px 大图均存在
@@ -44,6 +47,8 @@
 | 不能声称 | 真实情况 |
 |---|---|
 | 接入了真实大模型 | 默认 `local-rule` 生成的是结构化模板 boilerplate，不是 LLM 推理结果；OpenAI-compatible 代码已实现但未用真实 Key 端到端验证 |
+| 完整多 Agent Runtime | 当前是可解释的单次 Agent Workflow 记录闭环，不做多 Agent 调度、自动工具执行或异步 Worker |
+| 生产级 RAG / 向量数据库 | 当前 Knowledge Base 是关键词/简单相似度检索，`embedding_model`、`embedding_vector` 是扩展预留字段 |
 | AI 智能日志分析 | 日志诊断是关键词规则引擎（8种异常类型硬编码匹配），不是 LLM 推理 |
 | 毫秒级 latency 追踪 | local-rule 的 `costTimeMs` 实测约为 0–1ms，不代表 LLM 网络延迟 |
 | token 精确统计 | `LocalRuleGenerationProvider.estimateTokens()` = `text.length() / 3.5`，是字符数估算，不是真实 tokenizer |
@@ -157,6 +162,28 @@
   - Q：Docker 部署跑过吗？
 - 建议 commit message：`docs: add Q&A for ai_task, token estimation, Docker status`
 
+### P1-5：Agentic Coding Workflow 控制台最小闭环 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户要求把 DevFlow Copilot 从本地规则演示升级为可运行、可截图、可解释、可面试的 Agentic Coding Workflow 控制台。
+- 涉及文件：后端 schema/entity/mapper/service/controller/test，前端 types/api/router/views，README、docs、TODO、HANDOFF。
+- 完成内容：
+  - 新增 `generation_trace`
+  - 新增 `agent_run`、`agent_step`、`tool_call_record`、`human_review`
+  - 新增 `knowledge_document`、`knowledge_chunk`、`generation_knowledge_reference`
+  - 生成链路自动写入 Trace、Agent Run、Step、Tool Call、Human Review 和 Knowledge 引用
+  - 新增 `GET /api/generation-traces`、`GET /api/agent-runs/{id}/trace`、`POST /api/knowledge/documents`、`POST /api/knowledge/search` 等接口
+  - 新增前端 Agent Run Trace 页面与 Knowledge Base 页面，Prompt 模板页升级为 Prompt Studio 试运行，Dashboard 增加运行数、成功率、人工确认数、平均耗时等指标
+  - 新增 `docs/resume-evidence.md` 和 `docs/deployment-plan.md`
+- 未做内容：
+  - 没有接入真实 API Key
+  - 没有实现向量数据库
+  - 没有实现复杂多 Agent 调度
+  - 没有自动修改代码或自动 Git 提交
+- 验证结果：
+  - `cd backend && mvn test`：20 tests passed
+  - `cd frontend && npm run build`：通过；仍有既有大 chunk 警告
+
 ---
 
 ## P2 — 有时间再做（加分项）
@@ -173,13 +200,13 @@
 
 ## 下一轮建议任务
 
-**P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史。**
+**建议下一轮：为新增 Agent Run Trace / Knowledge Base 页面补截图或录制 30 秒演示 GIF。**
 
-下一轮先只读审查，不直接修改文件。
+下一轮仍然只处理一个明确任务。建议先补演示证据，不继续扩大后端能力。
 
-审查重点是判断 P1-1、P1-2 是否已闭环，文档是否一致，是否还有夸大表述，以及是否适合进入最终验收报告阶段。
+审查重点是截图路径真实存在、README 只引用真实文件、不把 keyword RAG 写成向量数据库、不把 Agent Run Trace 写成完整多 Agent Runtime。
 
-边界要求：不要继续扩功能；不要运行 Docker；不要把 Docker runtime 写成完整部署成功；继续保持 `local-rule`、日志规则、tokenUsage、`ai_task`、`InMemoryStore` 的真实边界。
+边界要求：不要提交真实 API Key；不要运行产生费用的真实模型调用；不要把 Docker runtime 写成完整部署成功；继续保持 `local-rule`、日志规则、tokenUsage、`ai_task`、`InMemoryStore`、Knowledge Base 和 Agent Run Trace 的真实边界。
 
 ---
 
@@ -196,3 +223,27 @@
 - 验收方式：可操作的检查步骤（可包含 checkbox）
 - 建议 commit message：feat/fix/docs: 简短说明
 ```
+
+---
+
+## P1-6：作品集截图证据与真实 Provider 验证准备 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：完成 Agentic Coding Workflow 最小闭环后，需要把项目整理成可截图、可验证、可写简历的作品集证据。
+- 涉及文件：`scripts/capture-portfolio-screenshots.mjs`、`frontend/package.json`、`README.md`、`docs/real-provider-verification.md`、`docs/resume-evidence.md`、`docs/images/*.png`、`HANDOFF.md`。
+- 完成内容：
+  - 新增作品集截图脚本，通过真实后端 API 预热安全 demo 数据，再从真实浏览器页面截图。
+  - 生成 6 张截图：Dashboard、Workbench、Agent Run Trace、Knowledge Base、Prompt Studio、Human Review / Trace 详情。
+  - README 顶部加入项目定位和 4 张核心截图，截图章节改为当前真实文件路径。
+  - 新增真实 Provider 验证手册，说明环境变量、启动方式、请求示例、fallback 和 API Key 泄露检查。
+  - 重写简历证据文档，补充 5 条后端架构感 bullet、5 条边界和 10 个面试追问回答。
+- 边界：
+  - 未提交真实 API Key。
+  - 未执行真实模型付费调用。
+  - 未实现自动改代码、自动 Git 提交、登录权限、SSE、向量数据库或完整多 Agent Runtime。
+  - Knowledge Base 仍是关键词/简单相似度检索。
+- 验收：本轮运行 `mvn test`、`npm run build`、`git diff --check`、截图存在性检查和敏感文件/密钥检查。
+
+## 下一轮建议
+
+优先做真实 OpenAI-compatible Provider 的一次手动端到端验证：由用户在本地 shell 配置低成本兼容服务的 API Key，跑一次最小生成请求，确认响应中的 provider/model/token/trace 字段，再把不含敏感信息的验证摘要补进 `docs/real-provider-verification.md`。

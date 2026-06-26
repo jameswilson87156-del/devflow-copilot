@@ -3,15 +3,20 @@ import {
   Cpu,
   ChatLineSquare,
   Clock,
+  Connection,
   DataBoard,
+  DataLine,
   Document,
   Files,
 } from '@element-plus/icons-vue'
-import DashboardView from '@/views/DashboardView.vue'
-import WorkbenchView from '@/views/WorkbenchView.vue'
-import LogAnalyzerView from '@/views/LogAnalyzerView.vue'
-import PromptTemplatesView from '@/views/PromptTemplatesView.vue'
-import GenerationHistoryView from '@/views/GenerationHistoryView.vue'
+
+const DashboardView = () => import('@/views/DashboardView.vue')
+const WorkbenchView = () => import('@/views/WorkbenchView.vue')
+const LogAnalyzerView = () => import('@/views/LogAnalyzerView.vue')
+const PromptTemplatesView = () => import('@/views/PromptTemplatesView.vue')
+const GenerationHistoryView = () => import('@/views/GenerationHistoryView.vue')
+const AgentRunTraceView = () => import('@/views/AgentRunTraceView.vue')
+const KnowledgeBaseView = () => import('@/views/KnowledgeBaseView.vue')
 
 export const navItems = [
   {
@@ -33,9 +38,21 @@ export const navItems = [
     icon: Document,
   },
   {
+    path: '/agent-runs',
+    name: 'AgentRunTrace',
+    label: 'Agent Run Trace',
+    icon: DataLine,
+  },
+  {
+    path: '/knowledge',
+    name: 'KnowledgeBase',
+    label: 'Knowledge Base',
+    icon: Connection,
+  },
+  {
     path: '/prompts',
     name: 'PromptTemplates',
-    label: 'Prompt 模板',
+    label: 'Prompt Studio',
     icon: ChatLineSquare,
   },
   {
@@ -58,6 +75,8 @@ const router = createRouter({
     { path: '/', name: 'Dashboard', component: DashboardView },
     { path: '/workbench', name: 'Workbench', component: WorkbenchView },
     { path: '/logs', name: 'LogAnalyzer', component: LogAnalyzerView },
+    { path: '/agent-runs', name: 'AgentRunTrace', component: AgentRunTraceView },
+    { path: '/knowledge', name: 'KnowledgeBase', component: KnowledgeBaseView },
     { path: '/prompts', name: 'PromptTemplates', component: PromptTemplatesView },
     { path: '/history', name: 'GenerationHistory', component: GenerationHistoryView },
     { path: '/docs', redirect: '/' },

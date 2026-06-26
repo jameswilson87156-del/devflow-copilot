@@ -95,6 +95,73 @@ Request example:
 - `POST /generations/{id}/save`
 - `POST /generations/{id}/confirm`
 
+## Generation Trace
+
+- `GET /generation-traces`
+- `GET /generation-traces?generationRecordId={id}`
+- `GET /generation-traces/{id}`
+
+Response data example:
+
+```json
+{
+  "id": 1,
+  "generationRecordId": 7,
+  "promptVersion": 2,
+  "inputVariables": "{\"generationType\":\"code-plan\"}",
+  "renderedPromptSummary": "项目：DevFlow Copilot；需求：增加 Agent Run Trace...",
+  "providerName": "local-rule",
+  "modelName": "local-rule-mvp",
+  "status": "READY_FOR_REVIEW",
+  "latencyMs": 12,
+  "errorMessage": null
+}
+```
+
+## Agent Run Trace
+
+- `GET /agent-runs`
+- `GET /agent-runs?projectId={id}`
+- `GET /agent-runs?generationRecordId={id}`
+- `GET /agent-runs/{id}/trace`
+
+Trace response includes:
+
+- `run`
+- `steps`
+- `toolCalls`
+- `humanReviews`
+
+## Knowledge Base
+
+- `GET /knowledge/documents`
+- `POST /knowledge/documents`
+- `GET /knowledge/documents/{id}/chunks`
+- `POST /knowledge/search`
+- `GET /knowledge/references?generationRecordId={id}`
+
+Create document request example:
+
+```json
+{
+  "title": "DevFlow Copilot 项目边界",
+  "sourceType": "manual",
+  "sourceUri": "docs/mvp-scope.md",
+  "content": "默认使用 local-rule，本地演示不需要 API Key...",
+  "embeddingModel": "",
+  "metadata": "demo=true"
+}
+```
+
+Search request example:
+
+```json
+{
+  "query": "local-rule provider API Key",
+  "topK": 5
+}
+```
+
 ## Dashboard
 
 - `GET /dashboard/stats`
@@ -103,3 +170,5 @@ Request example:
 
 - MVP 使用本地规则生成结构化 Markdown，不强依赖真实 LLM API。
 - 所有 AI 输出都是 review-only artifact，需要开发者人工确认后再使用。
+- Knowledge Base 当前使用关键词/简单相似度检索，不是向量数据库；embedding 字段是后续扩展点。
+- Agent Run Trace 是可解释的单次 workflow 记录闭环，不是复杂多 Agent 调度 Runtime。

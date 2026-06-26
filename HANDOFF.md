@@ -90,6 +90,17 @@
 
 ## 历史记录
 
+### 2026-06-26 — Codex — P1-5 Agentic Coding Workflow 控制台最小闭环
+
+- 做了什么：将 DevFlow Copilot 从本地规则演示扩展为最小可运行的 Agentic Coding Workflow 控制台。新增 Generation Trace、Agent Run / Agent Step / Tool Call / Human Review、轻量 Knowledge Base / RAG 引用，并把生成链路接入这些记录。前端新增 Agent Run Trace 页面、Knowledge Base 页面，Prompt 模板页升级为 Prompt Studio 试运行，Dashboard 增加运行数、成功率、人工确认数和平均耗时指标。
+- 修改文件：后端新增 Flyway V3/V4、实体、Mapper、Service、Controller 和 `AgenticWorkflowIntegrationTest`；前端修改 `domain.ts`、`devflow.ts`、路由、布局、Dashboard、Workbench、Prompt Studio，并新增 `AgentRunTraceView.vue`、`KnowledgeBaseView.vue`；文档更新 `README.md`、`docs/architecture.md`、`docs/api.md`、`docs/mvp-scope.md`、`DESIGN.md`、`TODO.md`，新增 `docs/resume-evidence.md`、`docs/deployment-plan.md`。
+- 验证证据：已执行 `cd backend && mvn test`，结果 `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；已执行 `cd frontend && npm run build`，结果成功，仍有既有 `@vueuse/core` PURE 注释提示和大 chunk 警告。
+- 真实边界：没有提交真实 API Key；OpenAI-compatible 仍只通过环境变量启用；默认仍可无 Key 用 `local-rule` 演示；Knowledge Base 当前是关键词/简单相似度检索，不是向量数据库；Agent Run Trace 是可解释的单次 workflow 记录，不是完整多 Agent Runtime；没有自动修改代码、自动提交 Git 或生产部署。
+- 遗留问题：新增页面尚未生成静态截图；Docker runtime 仍不能写成已完整部署成功；真实 LLM 端到端调用仍未配置 Key 验证。
+- 下一步：建议单独做“新增页面截图 / 演示 GIF”任务，补齐 Agent Run Trace、Prompt Studio、Knowledge Base 的作品集证据。
+
+---
+
 ### YYYY-MM-DD HH:mm — Agent — 任务名称
 
 - 做了什么：
@@ -351,3 +362,17 @@
 - Docker Compose 端口避让：已完成配置修改，提交 `e38126c chore: avoid Docker compose port conflict`；runtime `up --build` 未完整成功，原因是 Docker Hub 镜像元数据请求 `i/o timeout`。
 - 当前剩余优先任务：P1-3 只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史，判断 P1-1、P1-2 是否已闭环，并决定是否进入最终验收报告阶段。
 - 本条同步仅更新交接信息，不代表本轮修改业务代码。
+
+---
+
+## 2026-06-26 15:30 Codex 作品集证据收口
+
+- 本轮目标：只做作品集证据收口、真实 Provider 验证准备、README 展示增强和简历证据文档更新，不扩展后端主能力。
+- 已加载 Skill：`frontend-design`、`vercel-react-best-practices`、`emil-design-eng`。其中 Vercel Skill 的 React/Next.js 规则仅迁移使用通用部分，例如并行请求、bundle 拆分、按需加载、减少瀑布请求和动画性能。
+- 截图结果：新增 `scripts/capture-portfolio-screenshots.mjs`，通过真实后端 API 预热一条安全 demo Agent Workflow，再用 Playwright 从真实浏览器页面生成 6 张截图到 `docs/images/`。
+- 截图文件：`dashboard-agentic.png`、`workbench-running.png`、`agent-run-trace.png`、`knowledge-base-rag.png`、`prompt-studio.png`、`human-review-trace-detail.png`。
+- README：顶部定位改为面向 AI Coding / VibeCoding 的 Agentic Coding Workflow 控制台，并展示 Dashboard、Workbench、Agent Run Trace、Knowledge Base 四张核心截图。
+- Provider 文档：新增 `docs/real-provider-verification.md`，记录环境变量、启动命令、最小请求、成功字段、fallback 行为和 API Key 泄露检查。本轮 shell 中未检测到真实 Key，因此未执行外部模型调用。
+- 简历证据：重写 `docs/resume-evidence.md`，补充 5 条后端架构感 bullet、5 条不能夸大的边界、10 个面试追问回答。
+- 编码核对：使用 Node 按 UTF-8 读取并检查文件码位，确认现有中文文件本身是 UTF-8；PowerShell 普通 `Get-Content` 的乱码属于终端显示层问题。
+- 待验证：本轮收尾需运行 `mvn test`、`npm run build`、`git diff --check`、截图存在性检查和敏感文件/密钥检查。

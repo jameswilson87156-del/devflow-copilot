@@ -2,6 +2,8 @@
 
 更新时间：2026-06-22（Asia/Shanghai）
 
+> 历史报告说明：本文件记录 2026-06-22 的简历优化验收状态。2026-06-26 之后项目已新增 Generation Trace、Agent Run Trace、轻量 Knowledge Base / RAG 引用和 20 个后端测试；当前状态以 README、TODO.md、HANDOFF.md 和 docs/resume-evidence.md 为准。
+
 ## 一、验收结论
 
 - 当前分支：`resume-optimization-v1`。

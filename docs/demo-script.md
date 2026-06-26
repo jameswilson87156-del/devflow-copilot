@@ -158,10 +158,30 @@ Web server failed to start. Port 8080 was already in use.
 - 所有输出可复制、可确认、可复盘。
 - 这解决了 AI Coding 输出不可追踪的问题。
 
+## 15. 进入 Agent Run Trace
+
+点击左侧 `Agent Run Trace`。
+
+讲解点：
+
+- 这里展示一次生成任务的真实运行记录。
+- 步骤包括任务接收、Prompt 渲染、Knowledge 检索、Provider 生成和人工确认。
+- Tool Call 只记录工具名、输入摘要、输出摘要、状态和耗时，不展示或伪造模型思维链。
+
+## 16. 进入 Knowledge Base
+
+点击左侧 `Knowledge Base`。
+
+讲解点：
+
+- 可以创建知识文档，后端会自动切成 chunks。
+- 当前检索是关键词/简单相似度，不是向量数据库。
+- Workbench 生成时可以带 `knowledgeQuery`，响应会返回命中的 chunk 引用。
+
 ## 收尾总结
 
 可以这样收尾：
 
 ```text
-DevFlow Copilot 的重点不是替代 IDE，也不是做聊天机器人，而是把 AI Coding 前后的需求拆解、日志分析、Prompt 生成和历史确认流程产品化。MVP 先用本地规则跑通工作流，后续可以接真实 LLM API。
+DevFlow Copilot 的重点不是替代 IDE，也不是做聊天机器人，而是把 AI Coding 前后的需求拆解、Knowledge 引用、Provider 调用、Agent Trace、日志分析、Prompt 生成和历史确认流程产品化。MVP 默认用本地规则跑通工作流，真实 LLM 只通过环境变量启用。
 ```
