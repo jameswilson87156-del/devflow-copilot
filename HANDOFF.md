@@ -2,6 +2,17 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Dashboard 高保真中文版重构
+
+- 做了什么：只重构 Dashboard，不改后端、不新增接口、不改 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。基于 `docs/design/references/01-dashboard-ai-concept-cn.png` 的信息层级，把 `DashboardView.vue` 改成高密度深色 DevFlow Copilot 仪表盘。
+- 页面内容：新增 DevFlow Copilot Hero、Agentic Coding 工作流控制台副标题、Prompt / Provider / Trace / Knowledge / Human Review 说明、小型 Agent Workflow Overview、六项 KPI、最近智能体运行、启用中的 Prompt 模板、Provider 健康状态、最近人工审核、最新知识引用、最近活动时间线和高频工具。
+- 复用组件：`MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`。本轮没有新增公共组件，也没有改其他页面。
+- 使用真实接口：`GET /api/dashboard/stats`、`GET /api/prompts`、`GET /api/logs/history`、`GET /api/agent-runs`、`GET /api/agent-runs/{id}/trace`、`GET /api/knowledge/documents`、`GET /api/knowledge/references?generationRecordId={id}`。
+- fallback / 派生边界：`dashboard/stats` 不直接提供工具调用总数、知识命中总数、Provider 健康明细或 Human Review 列表；Dashboard 只从现有 Trace / Knowledge 引用接口派生这些展示。缺失 provider/model/reviewer 时使用 `local-rule`、`local-rule`、`未分配` 作为安全展示 fallback；缺失 Tool Call 或 Knowledge 引用时显示 0 或空状态，不伪造成后端统计。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 的 Dashboard 路径仍是 `/`，等待选择器仍是 `.dashboard`，本轮没有破坏脚本选择器；未重新生成所有截图，建议下一轮或统一截图任务再跑作品集截图。
+- 验证证据：`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。待收尾执行 `git diff --check`、`git status --short` 和敏感文件/密钥检查。
+- 下一步：建议单独做 Workbench 高保真重构，对齐 `docs/design/references/02-workbench-ai-concept-cn.png`，仍保持不改后端、不新增假接口。
+
 ## 2026-06-26 - Codex - 前端设计系统第一阶段地基
 
 - 做了什么：只做前端基础设施，不改后端、不新增接口、不重构 5 个页面。先审查 router、layout、components、views、api、types、theme.css 和 5 张 `docs/design/references/` AI concept images，然后落地设计系统地基。

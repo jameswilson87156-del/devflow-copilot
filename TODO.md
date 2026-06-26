@@ -282,6 +282,37 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
 - 建议 commit message：`feat: add devflow frontend design system foundation`
 
+## P1-9：Dashboard 高保真中文版重构 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：基于 `docs/design/references/01-dashboard-ai-concept-cn.png`，只重构 Dashboard，不改 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio 或后端。
+- 涉及文件：`frontend/src/views/DashboardView.vue`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Dashboard 首屏改为深色 DevFlow Copilot Hero，包含标题、Agentic Coding 工作流控制台副标题、Prompt / Provider / Trace / Knowledge / Human Review 说明和小型 Agent Workflow Overview。
+  - KPI 区使用 `MetricCard` 展示今日运行数、成功率、平均耗时、人工审核、工具调用、知识库命中。
+  - 中部使用 `SectionCard` 组织最近智能体运行、启用中的 Prompt 模板、Provider 健康状态、最近人工审核、最新知识引用。
+  - 右侧模块补充 Agent Workflow Overview、最近活动时间线和高频工具。
+  - 复用 `MetricCard`、`SectionCard`、`StatusBadge`、`ProviderBadge`；未新增假接口。
+- 真实接口：
+  - `GET /api/dashboard/stats`
+  - `GET /api/prompts`
+  - `GET /api/logs/history`
+  - `GET /api/agent-runs`
+  - `GET /api/agent-runs/{id}/trace`
+  - `GET /api/knowledge/documents`
+  - `GET /api/knowledge/references?generationRecordId={id}`
+- fallback / 派生说明：
+  - `dashboard/stats` 不直接提供工具调用总数、知识命中总数、Provider 健康明细和 Human Review 列表；页面集中从现有 Trace / Knowledge 引用接口派生。
+  - 缺失 provider/model/reviewer 时仅使用 `local-rule`、`local-rule`、`未分配` 等安全展示 fallback。
+  - 缺失 Tool Call 或 Knowledge 引用时显示 0 或空状态，不伪造成后端真实统计。
+- 未做内容：
+  - 未改后端。
+  - 未新增接口或假接口。
+  - 未重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。
+  - 未重新生成 `docs/images/` 真实截图；建议下一轮或统一截图任务执行。
+- 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
+- 建议 commit message：`feat: redesign dashboard with devflow design system`
+
 ## 下一轮建议
 
-优先单独重构 Dashboard，让仪表盘对齐 `docs/design/references/01-dashboard-ai-concept-cn.png` 的 Hero、六项 KPI、最近运行、Prompt 模板、工作流概览、活动时间线、Provider 健康、人工审核、知识引用和高频工具模块。下一轮仍不要同时重构 Workbench、Agent Run Trace、Knowledge Base、Prompt Studio。
+优先单独重构 Workbench，让工作台对齐 `docs/design/references/02-workbench-ai-concept-cn.png` 的三栏工作流、Prompt 输入、Provider 选择、生成结果、Trace 可解释过程和 Human Review 停点。下一轮仍不要同时重构 Agent Run Trace、Knowledge Base、Prompt Studio。
