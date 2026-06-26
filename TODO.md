@@ -447,6 +447,28 @@
   - 遗留优化：后续可做前端 bundle split / manual chunks，降低大 chunk 警告。
 - 建议 commit message：`docs: refresh devflow portfolio screenshots and readme`
 
+## P1-14：Production Demo Readiness / 部署前安全收口 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：今天准备部署服务器，本轮只做 portfolio demo 部署前安全收口，不继续重构页面、不改后端核心业务逻辑、不新增复杂功能。
+- 涉及文件：`README.md`、`docs/deployment-plan.md`、`docs/deployment-production-demo.md`、`docs/env.example`、`docs/nginx/devflow-demo.conf.example`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 新增 `docs/deployment-production-demo.md`，说明项目定位、部署边界、推荐 Nginx + Spring Boot 架构、服务器部署步骤、环境变量、安全说明和验收 checklist。
+  - 新增 `docs/env.example`，只包含安全占位符，说明公开演示可使用 `local-rule`，真实 Provider 必须通过服务器环境变量配置。
+  - 新增 `docs/nginx/devflow-demo.conf.example`，使用占位 `server_name devflow.example.com`、占位前端 `dist` 路径，并将 `/api/` 反代到 `127.0.0.1:8080`；未写真实域名、服务器 IP 或证书私钥路径。
+  - README 新增 `Portfolio Demo 部署` 小节，链接生产演示部署指南、env 示例和 Nginx 示例，并继续明确 `docs/images/` 是真实截图、`docs/design/references/` 不是运行截图。
+  - 更新 `docs/deployment-plan.md`，把过期的“仓库还没有 env example”说明改为引用 `docs/env.example` 和新的 production demo 指南。
+- 部署风险 / 边界记录：
+  - 当前没有独立 `/api/health`，部署验收使用已有 `/api/dashboard/stats`。
+  - `application-prod.yml` 的数据库默认值仅适合示例；服务器部署必须用环境变量覆盖 `DB_PASSWORD` 等敏感配置。
+  - 前端生产环境依赖 Nginx `/api/` 反向代理；Vite proxy 仅用于本地开发。
+  - 该部署方案是 portfolio demo，不是 production SaaS；不新增登录、权限、SSE、自动 Git 提交或完整多 Agent Runtime。
+- 验证结果：
+  - `cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - 后续可选优化：做前端 bundle split / manual chunks，进一步降低大 chunk 警告。
+- 建议 commit message：`docs: add production demo deployment guide`
+
 ## 下一轮建议
 
 建议下一步将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。

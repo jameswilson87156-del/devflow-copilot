@@ -17,13 +17,16 @@
 步骤：
 
 ```bash
-cp .env.example .env
-# 手动填写 DB_PASSWORD、MYSQL_ROOT_PASSWORD
-# 如需真实模型，再填写 DEVFLOW_AI_PROVIDER=openai-compatible 和 DEVFLOW_AI_API_KEY
+# 参考 docs/env.example，在服务器环境变量或私有 .env 中填写配置。
+# 不要提交真实 .env。
+# 手动填写 DB_PASSWORD、MYSQL_ROOT_PASSWORD。
+# 如需真实模型，再填写 DEVFLOW_AI_PROVIDER=openai-compatible 和 DEVFLOW_AI_API_KEY。
 docker compose up --build -d
 ```
 
-当前仓库还没有提交 `.env.example`；上线前应新增只含占位符的模板文件，不能提交真实 `.env`。
+安全占位符模板见 `docs/env.example`；不能提交真实 `.env`。
+
+更完整的作品集服务器部署说明见 `docs/deployment-production-demo.md`。
 
 ## 方案 B：前后端分离部署
 
@@ -64,7 +67,7 @@ DEVFLOW_AI_FALLBACK_TO_LOCAL=true
 
 ```text
 DEVFLOW_AI_PROVIDER=openai-compatible
-DEVFLOW_AI_API_KEY=<secret>
+DEVFLOW_AI_API_KEY=<set-on-server-only>
 ```
 
 ## API Key 保护

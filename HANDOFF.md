@@ -2,6 +2,16 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - Production Demo Readiness / 部署前安全收口
+
+- 做了什么：只做部署前安全收口，不继续改 UI 页面、不改后端核心业务逻辑、不新增接口或复杂功能。先审查 `README.md`、`docs/deployment-plan.md`、`docs/real-provider-verification.md`、`docs/design/references/README.md`、`docker-compose.yml`、后端配置、Vite 配置、`.gitignore`、截图脚本和当前 git status。
+- 当前部署风险点：没有独立 `/api/health`，部署验收使用已有 `/api/dashboard/stats`；生产 profile 的 DB 默认值只能作示例，服务器上必须通过环境变量覆盖；前端生产访问依赖 Nginx `/api/` 反向代理，Vite proxy 只用于本地开发；公开 demo 应默认使用 `local-rule` 或启用 fallback，避免 API Key 和成本风险。
+- 新增文档：`docs/deployment-production-demo.md`，覆盖项目定位、portfolio demo 边界、推荐 Nginx + Spring Boot 架构、服务器部署步骤、环境变量、安全说明和验收 checklist。明确不是 production SaaS、不自动改代码、不自动提交 Git、不实现完整多 Agent Runtime，Knowledge Base 仍是关键词检索 / RAG 引用。
+- 新增示例：`docs/env.example` 只包含占位符；`docs/nginx/devflow-demo.conf.example` 使用 `devflow.example.com`、占位 `dist` 路径，并将 `/api/` 反代到 `127.0.0.1:8080`。没有真实域名、服务器 IP、证书路径或 API Key。
+- README / 既有部署文档：README 新增 `Portfolio Demo 部署` 小节并链接 production demo 指南、env 示例和 Nginx 示例；`docs/deployment-plan.md` 修正过期的 `.env.example` 说明，改为引用 `docs/env.example`。
+- 验证证据：`cd backend && mvn test` 成功，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+- 下一步：建议提交本轮部署文档，然后将 `feat/frontend-design-system-foundation` 合并到 `main` 或创建 PR 后合并。部署服务器时只在服务器环境变量或 Secret Manager 配置真实 Provider Key，不写入仓库。
+
 ## 2026-06-26 - Codex - 真实浏览器截图与 README 收口
 
 - 做了什么：只做前端中文版 UI 重设计收口，不继续大改页面、不改后端核心逻辑、不新增接口。复查 `scripts/capture-portfolio-screenshots.mjs`、README 截图区域、`docs/images/`、`docs/design/references/README.md` 和前端路由，确认截图脚本覆盖 Dashboard、Workbench、Agent Run Trace、Knowledge Base、Prompt Studio，并额外覆盖 Human Review Trace。

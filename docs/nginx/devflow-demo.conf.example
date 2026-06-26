@@ -1,0 +1,28 @@
+# DevFlow Copilot portfolio demo Nginx example.
+# Replace placeholders on your server. Do not commit real domains, IPs, or certificate paths.
+
+server {
+    listen 80;
+    server_name devflow.example.com;
+
+    # Replace with the absolute path to your built frontend/dist directory.
+    root /var/www/devflow/frontend/dist;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90s;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# TLS should be configured on the server with your own certificate management.
+# Keep real certificate paths and private key paths out of this repository.
