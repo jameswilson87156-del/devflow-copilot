@@ -190,7 +190,7 @@
 
 | 编号 | 任务 | 说明 |
 |---|---|---|
-| P2-1 | 真实 LLM 端到端验证 | 配置低成本 OpenAI-compatible Key（如 DeepSeek、Groq），跑通真实调用，更新 README |
+| P2-1 | 真实 LLM 端到端验证 - 已完成一次最小验证 | 2026-06-26 在本机 `8080` 后端跑通 `openai-compatible` 最小生成请求，记录见 `docs/real-provider-verification.md`；未记录或泄露 API Key |
 | P2-2 | 前端 Vitest 最小测试 | 为 StatusTag 或 WorkbenchView 计算属性添加 1–2 个 Vitest 测试 |
 | P2-3 | Docker compose up --build 网络条件好时重跑 | 换镜像源或等网络恢复后重新验证，成功后补充进 HANDOFF.md 和 ENVIRONMENT_CHECK.md |
 | P2-4 | 30 秒演示 GIF | 录制 Workbench 生成 → 保存 → 确认流程，放入 README |

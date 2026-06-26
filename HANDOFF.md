@@ -2,6 +2,15 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - 真实 OpenAI-compatible Provider 最小验证
+
+- 做了什么：在不读取、不打印、不要求用户提供 API Key 的前提下，验证本机已运行后端 `http://127.0.0.1:8080`。`GET /api/dashboard/stats` 返回 HTTP 200；`POST /api/ai/requirement-split` 用最短 Prompt 完成一次真实 Provider 请求。
+- Provider 结果：生成记录 `recordId=13`，`providerName=openai-compatible`，`modelName=gpt-5.5`，`costTimeMs=22937`，`status=READY_FOR_REVIEW`，`errorMessage=null`，`agentRunId=5`。
+- Trace 闭环：`GET /api/generation-traces?generationRecordId=13` 返回 1 条 trace；`GET /api/agent-runs?generationRecordId=13` 返回 1 条 run；`GET /api/agent-runs/5/trace` 返回 5 steps、3 tool calls、1 human review；`GET /api/knowledge/references?generationRecordId=13` 返回 3 条引用。
+- fallback 结论：未重启后端做无 Key 实测；通过代码和 `ProviderAndDiagnosisTest.routerFallsBackToLocalRuleWhenOpenAiConfigIsMissing` 确认缺 Key 且 `DEVFLOW_AI_FALLBACK_TO_LOCAL=true` 时会降级 `local-rule`。如后续要做无 Key 运行时验证，需要用户在同一个 PowerShell 里重新设置 `DEVFLOW_AI_*` 后再启动后端。
+- 修改文件：`docs/real-provider-verification.md`、`HANDOFF.md`、`TODO.md`。
+- 验证证据：`backend` 目录执行 `mvn test` 通过，20 tests；`frontend` 目录执行 `npm run build` 成功，仍有既有 VueUse PURE 注释提示和大 chunk 警告；`git diff --check` 退出码 0，仅有 CRLF 提示；API Key 扫描只命中文档占位符，没有真实 Key；`git status --short` 仅显示本轮 3 个文档修改。
+
 ## 当前待处理交接
 
 ### 更新时间

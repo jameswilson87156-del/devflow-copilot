@@ -107,4 +107,24 @@ For this portfolio evidence pass, no real API key was present in the current she
 - Knowledge Base references are returned
 - Human Review can move from pending to saved and confirmed
 
-Manual real-provider verification remains pending until the user supplies a compatible endpoint, model name, and API key through environment variables.
+The record below supersedes the earlier pending status for this machine: one local `openai-compatible` smoke test has now completed on the already-running backend.
+
+## Local Verification Record - 2026-06-26
+
+- Backend port: `8080`.
+- Health/API reachability: `GET http://127.0.0.1:8080/api/dashboard/stats` returned HTTP `200` with wrapper `code=0`.
+- API Key detection: the Codex verification shell did not contain `DEVFLOW_AI_API_KEY`; the already-running backend process nevertheless completed a real `openai-compatible` call, which means its own startup environment had Provider configuration available. The key value was not read, printed, logged, or written to this document.
+- Minimal generation request: `POST http://127.0.0.1:8080/api/ai/requirement-split` with prompt `请用一句话说明 DevFlow Copilot 是什么。`.
+- Real Provider result: success.
+  - `recordId`: `13`
+  - `providerName`: `openai-compatible`
+  - `modelName`: `gpt-5.5`
+  - `costTimeMs`: `22937`
+  - `status`: `READY_FOR_REVIEW`
+  - `errorMessage`: `null`
+  - `agentRunId`: `5`
+- Generation Trace verification: `GET /api/generation-traces?generationRecordId=13` returned HTTP `200`, one trace row, `providerName=openai-compatible`, `modelName=gpt-5.5`, `latencyMs=22937`, `status=READY_FOR_REVIEW`, `errorMessage=null`.
+- Agent Workflow verification: `GET /api/agent-runs?generationRecordId=13` returned HTTP `200` with one run. `GET /api/agent-runs/5/trace` returned HTTP `200` with `5` steps, `3` tool calls, and `1` human review.
+- Knowledge Reference verification: the generation response returned `3` knowledge references, and `GET /api/knowledge/references?generationRecordId=13` returned HTTP `200` with `3` references.
+- Fallback verification: source and tests confirm missing API Key fallback. `OpenAiCompatibleGenerationProvider` rejects blank `DEVFLOW_AI_API_KEY`; `GenerationProviderRouter` falls back to `local-rule` when `DEVFLOW_AI_FALLBACK_TO_LOCAL=true`; `ProviderAndDiagnosisTest.routerFallsBackToLocalRuleWhenOpenAiConfigIsMissing` covers this behavior. No backend restart was performed for an additional no-key runtime test.
+- Secret handling: no full API Key was requested from the user, inspected from the backend process, printed to console, or committed to files.
