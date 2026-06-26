@@ -10,6 +10,10 @@ DevFlow Copilot 是面向 AI Coding / VibeCoding 场景的 Agentic Coding Workfl
 | --- | --- |
 | ![Agent Run Trace](docs/images/agent-run-trace.png) | ![Knowledge Base](docs/images/knowledge-base-rag.png) |
 
+| Prompt Studio | Human Review Trace |
+| --- | --- |
+| ![Prompt Studio](docs/images/prompt-studio.png) | ![Human Review Trace](docs/images/human-review-trace-detail.png) |
+
 项目默认使用 `local-rule` Provider，它是本地规则/模板生成，不是真实 LLM 推理，作用是在没有 API Key 的情况下稳定演示 Prompt 生成链路、状态流转、保存确认和历史记录。项目也提供 OpenAI-compatible Provider 的代码层适配，可对接兼容 `/v1/chat/completions` 的服务；当前仓库不提交真实 API Key，也不把真实模型端到端调用写成已稳定验收。
 
 ## 项目定位
@@ -42,6 +46,8 @@ DevFlow Copilot / AI Coding Workbench 是一个面向开发者的 Agentic Coding
 - `docs/images/prompt-studio.png`
 - `docs/images/human-review-trace-detail.png`
 
+`docs/design/references/` 目录保存的是 AI-generated visual references，只用于前端重设计阶段确定视觉方向；它们不是运行截图，也不作为 README 主展示图来源。README 和作品集主展示图均使用 `docs/images/` 下由本地真实前端页面生成的浏览器截图。
+
 截图可通过前端脚本重新生成：
 
 ```bash
@@ -56,10 +62,10 @@ npm run screenshots:portfolio
 - 工作台概览：展示 AI 编码工作流状态、待人工确认队列、最近 Trace、日志诊断和 Prompt 模板状态。
 - AI 工作台：基于项目上下文和 Prompt 模板生成需求拆解、代码修改计划、README、Commit Message、修复 Prompt 等 Artifact。
 - 日志分析：基于关键词规则引擎识别常见 Java / Spring Boot 异常，例如 NullPointerException、SQLSyntaxErrorException、BeanCreationException、端口占用等，并输出排查步骤和修复 Prompt；当前不是 LLM 推理。
-- Prompt 模板：管理模板类型、变量、版本、启用状态和默认模板。
+- Prompt Studio：管理 Prompt 模板、变量配置、当前版本、渲染预览、测试运行、Provider 选择和 Generation Trace / Human Review 关联。
 - 生成历史：记录 provider、model、tokenUsage、latency、模板名称、模板版本、失败原因和状态；其中 local-rule 模式下 tokenUsage 是基于文本长度的估算值，不是真实 tokenizer 统计。
 - Generation Trace：为每次生成记录 promptVersion、inputVariables、renderedPrompt 摘要、provider、model、status、latencyMs 和 errorMessage，不保存 API Key。
-- Agent Run Trace：记录一次任务运行、拆解步骤、Prompt 渲染、Knowledge 检索、Provider 工具调用和 Human Review 状态，方便解释 Agent Workflow，但不等同于完整多 Agent 调度 Runtime。
+- Agent Run Trace：记录一次任务运行、拆解步骤、Prompt 渲染、Knowledge 检索、Provider 工具调用、Tool Call 和 Human Review 状态，方便解释 Agent Workflow，但不等同于完整多 Agent 调度 Runtime。
 - Knowledge Base：支持创建知识文档、自动文本切片、关键词/简单相似度检索，并在生成响应中返回命中的 chunk 引用；`embedding_model`、`embedding_vector` 字段为后续向量检索扩展预留。
 - 人工确认：约束生成结果从待人工确认到保存、确认，避免生成内容绕过 review 流程。
 

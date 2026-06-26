@@ -2,6 +2,16 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-06-26 - Codex - 真实浏览器截图与 README 收口
+
+- 做了什么：只做前端中文版 UI 重设计收口，不继续大改页面、不改后端核心逻辑、不新增接口。复查 `scripts/capture-portfolio-screenshots.mjs`、README 截图区域、`docs/images/`、`docs/design/references/README.md` 和前端路由，确认截图脚本覆盖 Dashboard、Workbench、Agent Run Trace、Knowledge Base、Prompt Studio，并额外覆盖 Human Review Trace。
+- 服务与截图：本机后端 `http://127.0.0.1:18081/api/dashboard/stats` 可访问，前端 `http://127.0.0.1:5174` 可访问。执行 `cd frontend && npm run screenshots:portfolio` 成功，通过真实后端 API 预热 demo Agent Workflow，再从真实浏览器页面输出截图到 `docs/images/`。
+- 实际截图文件：`docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/knowledge-base-rag.png`、`docs/images/prompt-studio.png`、`docs/images/human-review-trace-detail.png`，均为 1440x1040 PNG。本轮没有使用 `docs/design/references/` 图片作为 README 主截图。
+- README：顶部截图展示区补充 Prompt Studio 和 Human Review Trace；项目截图小节明确 `docs/images/` 是真实浏览器运行截图，`docs/design/references/` 是 AI-generated visual references，不是 runtime screenshots；核心功能文案补充 Prompt Studio、Tool Call、Generation Trace / Human Review 关联，并继续保持 Knowledge Base 关键词检索、非完整多 Agent Runtime、非自动改代码系统等边界。
+- 截图脚本：本轮没有修改 `scripts/capture-portfolio-screenshots.mjs`。脚本现有等待选择器仍可进入 `/`、`/workbench`、`/agent-runs`、`/knowledge`、`/prompts` 并完成截图。
+- 验证证据：`cd backend && mvn test` 成功，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`cd frontend && npm run build` 成功；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。后续可做 bundle split / manual chunks 优化。
+- 下一步：建议将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续检查不提交 API Key、`.env`、`node_modules`、`dist`、`target` 或日志文件。
+
 ## 2026-06-26 - Codex - Prompt Studio 高保真中文版重构
 
 - 做了什么：只重构 Prompt Studio，不改后端、不新增接口、不改 Dashboard、Workbench、Agent Run Trace、Knowledge Base。基于 `docs/design/references/05-prompt-studio-ai-concept-cn.png` 的提示词工作室结构，把 `PromptTemplatesView.vue` 改成左 Prompt 模板列表、中 Prompt 编辑器与渲染预览、右测试运行预览与执行详情、底部可观测性的真实 Prompt 管理页。

@@ -420,6 +420,33 @@
 - 验证结果：`cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus/Markdown 大 chunk 警告。
 - 建议 commit message：`feat: redesign prompt studio with devflow design system`
 
+## P1-13：统一生成真实浏览器截图并更新 README ✅ 本轮完成
+
+- 状态：**done**
+- 背景：前端设计系统、Dashboard、Workbench、Knowledge Base、Prompt Studio 已完成高保真中文版重构；本轮只做作品集截图和 README 收口，不继续大改页面、不改后端核心逻辑、不新增接口。
+- 涉及文件：`README.md`、`TODO.md`、`HANDOFF.md`、`docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/knowledge-base-rag.png`、`docs/images/prompt-studio.png`、`docs/images/human-review-trace-detail.png`。
+- 截图脚本：
+  - 使用既有 `frontend` 脚本 `npm run screenshots:portfolio`。
+  - 本轮没有修改 `scripts/capture-portfolio-screenshots.mjs`。
+  - 脚本确认覆盖 `/`、`/workbench`、`/agent-runs`、`/knowledge`、`/prompts`，并通过真实后端 API 预热 demo Agent Workflow。
+- 实际生成截图：
+  - `docs/images/dashboard-agentic.png`，1440x1040。
+  - `docs/images/workbench-running.png`，1440x1040。
+  - `docs/images/agent-run-trace.png`，1440x1040。
+  - `docs/images/knowledge-base-rag.png`，1440x1040。
+  - `docs/images/prompt-studio.png`，1440x1040。
+  - `docs/images/human-review-trace-detail.png`，1440x1040。
+- README 更新：
+  - 顶部截图展示区补充 Prompt Studio 和 Human Review Trace。
+  - 项目截图小节明确 `docs/images/` 是真实浏览器运行截图来源。
+  - 新增说明：`docs/design/references/` 是 AI-generated visual references，不是 runtime screenshots，也不作为 README 主展示图来源。
+  - 核心功能文案补充 Prompt Studio、Tool Call、Generation Trace / Human Review 关联；继续保持 local-rule、Knowledge Base 关键词检索、非完整多 Agent Runtime、非自动改代码系统等真实边界。
+- 验证结果：
+  - `cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `cd frontend && npm run build` 通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - 遗留优化：后续可做前端 bundle split / manual chunks，降低大 chunk 警告。
+- 建议 commit message：`docs: refresh devflow portfolio screenshots and readme`
+
 ## 下一轮建议
 
-建议下一轮做统一截图任务，重新生成 Dashboard / Workbench / Knowledge Base / Prompt Studio 等真实运行截图，并更新 README 中的作品集截图引用。下一轮仍不要扩大后端能力。
+建议下一步将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。
