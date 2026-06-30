@@ -1,5 +1,7 @@
 ﻿# DevFlow Copilot
 
+Portfolio Case Study: [https://ai-agent-portfolio-hub.vercel.app/projects/devflow](https://ai-agent-portfolio-hub.vercel.app/projects/devflow)
+
 DevFlow Copilot 是面向 AI Coding / VibeCoding 场景的 Agentic Coding Workflow 控制台。它不是通用聊天页，而是把项目上下文、Prompt 模板、Generation Trace、Agent Run Trace、Knowledge Base 检索、日志诊断和人工确认流程组织成可追踪、可测试、可演示的工程化闭环。
 
 | Dashboard | Workbench |
