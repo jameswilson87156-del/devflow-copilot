@@ -29,13 +29,13 @@
 - **DTO 校验 + GlobalExceptionHandler**，统一 `ApiResponse` 响应结构
 - **20 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`
 - **ai_task 最小只读查询入口**：`GET /api/tasks?projectId={projectId}`，复用 `AiTaskMapper`，按 ID 倒序返回指定项目任务列表
-- **Vue 3 + TypeScript + Element Plus** 前端，WorkbenchView 三栏布局，状态机按钮联动，`npm run build` 通过
-- **截图**：`docs/images/` 下5张标准截图 + 5张1920px 大图均存在
+- **Vue 3 + TypeScript + Element Plus** 前端，8 个真实页面路由，Dashboard / Workbench / Trace Evidence / Human Review 已升级为中文 AI Coding Workbench / Agentic Workflow Console 展示页，`npm run build` 通过
+- **截图**：`docs/images/` 下 13 张本地真实浏览器截图均存在；canonical 核心截图为 `dashboard.png`、`workbench.png`、`trace-evidence.png`、`human-review.png`，另保留现有 README 兼容命名和 5 张 1920px 历史大图
 - **Docker Compose** 配置存在，`docker compose config` 通过（三服务：mysql / backend / frontend）
 - **后端宿主端口避让**：已从 `8080` 改为 `${BACKEND_HOST_PORT:-18080}:8080`，避免与现有服务冲突
 - **GitHub Actions CI** 配置存在，包含后端 `mvn -B verify` 和前端 `npm ci && npm run build`
 - **环境审计文档**：`docs/ENVIRONMENT_CHECK.md` 已记录本机工具版本和 Docker Compose 验证记录
-- **Git 仓库**：当前分支 `resume-optimization-v1`，协作规则已提交
+- **Git 仓库**：当前作品集升级分支为 `feat/portfolio-showcase-v1`，协作规则已提交
 - **README 简历版项目介绍**：已新增“简历版项目介绍”短小节，面向大三 Java 后端实习 / AI 工具开发 / Java + AI 应用投递场景，并保持项目真实边界
 
 ---
@@ -530,6 +530,35 @@
   - `git status --short` 只显示 `.gitignore` 和 `docs/frontend_reference_screenshot_index.md` 为本轮可提交改动；`.local/` 截图目录未进入 Git。
 - 建议 commit message：`docs: add frontend reference screenshot index`
 
+## P1-17：第一阶段前端作品集化 UI 改造 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户已确认前端参考调研、moodboard、公开截图索引、视觉落地规格和指标快照，可以开始第一阶段前端代码改造。
+- 涉及文件：`frontend/src/styles/theme.css`、`frontend/src/router/index.ts`、`frontend/src/components/MetricCard.vue`、`frontend/src/components/SidebarNav.vue`、`frontend/src/components/TopBar.vue`、`frontend/src/views/DashboardView.vue`、`frontend/src/views/WorkbenchView.vue`、`frontend/src/views/AgentRunTraceView.vue`、`frontend/src/views/HumanReviewView.vue`、`frontend/src/views/KnowledgeBaseView.vue`、`frontend/src/views/PromptTemplatesView.vue`、`scripts/capture-portfolio-screenshots.mjs`、`docs/images/*.png`、`docs/metrics/metrics_snapshot.md`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 全局视觉系统切换为深色开发者工具风格、Runtime Mint 信号色、蓝黑 / 石墨黑背景、弱边框、低阴影、6px 圆角和高密度企业级控制台节奏。
+  - App Shell 按 220px Sidebar、52px Topbar、24px page padding、16px panel padding / grid gap 落地；导航结构升级为工作流、可观测性、知识与引用、治理与审核、配置。
+  - Provider / Settings 保持 disabled，并显示 `配置预留 / 当前通过环境变量配置`；未接真实 API Key。
+  - Dashboard 增加 Product Evidence Hero、中文 KPI、Metrics Snapshot、Provider Health、最近运行、复核队列、执行证据和可见的数据来源声明。
+  - Workbench 强化需求与上下文、Prompt 模板、Provider 状态、Knowledge References、Artifact Preview、Change Summary、Trace Summary、Tool Calls Timeline 和 Human Review 决策位；`Request Changes` 明确为后端未提供 API 的 disabled 控制。
+  - Trace Evidence 重构为 Run list + Timeline / Steps / Spans + Step Inspector + Raw JSON / Rendered Prompt / Fallback Reason / Tool I/O tabs。
+  - Trace Evidence 已完成人工评审并进入阶段冻结；评审记录见 `docs/design_reviews/trace_evidence_review.md`，后续只允许小范围收尾。
+  - 新增独立 Human Review 页面，展示复核队列、风险标签、Artifact 预览、决策面板、复核原因、状态历史和为什么需要人工复核说明。
+  - Knowledge Base / Prompt Templates 轻量对齐页面级链路：`Document -> Chunk -> Search -> Citation -> Generation Reference`、`Template -> Variables -> Render Preview -> Test Run -> Trace metadata`。
+  - 截图脚本改为 1440x1000 viewport，并把 Human Review 截图入口指向独立 `/reviews` 页面；同时产出 `dashboard.png`、`workbench.png`、`trace-evidence.png`、`human-review.png` canonical 截图和现有 README 兼容别名。
+- 数据来源与边界：
+  - 页面可见位置标注 `Demo Data / 来源：本地指标快照 / local demo`。
+  - 指标来自现有接口、Trace / Knowledge 派生、本地 seed/demo 数据或 `docs/metrics/metrics_snapshot.md`；缺失字段显示未采集、未记录或 0。
+  - 未复制第三方 Logo、文案、截图、完整布局或产品承诺；`.local/reference_screenshots/` 仍为 ignored，未加入 Git。
+  - 未把 `local-rule` 包装成真实 LLM，未把 demo seed / UI-only 字段写成生产数据，未声称 Eval、RBAC、多 Agent Runtime 或向量数据库已实现。
+- 验证结果：
+  - `cd frontend && npm run build`：通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - `cd backend && mvn test`：通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `node scripts/collect-portfolio-metrics.js --run-checks`：通过，已刷新 `docs/metrics/metrics_snapshot.md`，当前前端页面文件 8 个、真实 component route 8 个、disabled nav item 3 个。
+  - `cd frontend && npm run screenshots:portfolio`：通过，基于本地真实运行页面生成 6 张作品集截图。
+  - `git diff --check`：通过，仅有 LF/CRLF 提示。
+- 建议 commit message：`feat: upgrade devflow portfolio showcase UI`
+
 ## 下一轮建议
 
-建议下一步先基于 `docs/frontend_reference_research.md`、`docs/frontend_moodboard.md`、`docs/frontend_showcase_design.md` 和 `docs/frontend_reference_screenshot_index.md` 让用户确认前端视觉落地规格；确认前不要进入 UI 代码改造。继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。
+建议下一步先由用户人工查看 `docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/human-review-trace-detail.png` 等本地真实截图，再决定是否进入第二阶段 README 展示文案、截图编排或更细的页面 polish。继续保持不提交 API Key、不提交 `.env`、不提交 `.local/`、不提交 `node_modules` / `dist` / `target` / 日志文件。

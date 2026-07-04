@@ -2,6 +2,35 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-04 - Codex - Trace Evidence 冻结与 Dashboard / Workbench 第一阶段收口
+
+- 本轮目标：把本地真实 `docs/images/trace-evidence.png` 作为第一阶段视觉基准，冻结 Trace Evidence 大结构，并把同一套深色企业级 AI DevTools 视觉语言收口到 Dashboard 与 Workbench；未继续重写 Knowledge Base / Prompt Templates，Human Review 只纳入既有第一阶段成果与截图。
+- 设计决策：沿用 Trace Evidence 的深色背景、220px 左侧导航、顶部 command bar、Runtime Mint 克制高亮、弱边框、低阴影、中文企业级文案、等宽技术字段、状态小圆点和 Demo Data 边界说明。Dashboard 以产品总览和证据链为主，Workbench 以需求、上下文、Artifact、Trace、Tool Call、Human Review 三栏闭环为主，不采用普通 CRUD 后台或聊天页结构。
+- Trace Evidence：新增 `docs/design_reviews/trace_evidence_review.md`，记录“阶段通过”；页面只统一 fallback 文案为 `local-rule fallback；本地演示模式不连接真实 API Key。`，未继续改大结构。
+- Dashboard / Workbench：Dashboard 的待人工复核改为从现有 Agent Run Trace 实际状态派生，不再把总审核数冒充待复核；Metrics Snapshot 对齐当前 8 个页面、8 个真实路由、30 个 endpoint、20 个测试和 13 张截图。Workbench 修复 Knowledge References 长标题与 score 在 1440px 截图中的重叠。
+- 截图脚本：`scripts/capture-portfolio-screenshots.mjs` 继续使用 1440x1000 viewport；新增 canonical 输出 `dashboard.png`、`workbench.png`、`trace-evidence.png`、`human-review.png`，同时刷新现有 README 兼容别名。脚本增加前端 `/api` proxy 数据校验，避免 API 预热成功但页面误连其他 8080 服务时生成空数据截图。
+- 真实截图：后端临时启动在 `127.0.0.1:18081`，前端临时启动在 `127.0.0.1:5175`，并使用 `VITE_API_PROXY_TARGET=http://127.0.0.1:18081`。截图前通过真实 API 创建并确认 local-rule Demo Artifact；四张 canonical 截图已逐张检查，均来自当前项目本地真实路由，不是聊天截图、第三方截图或 AI concept 图。
+- 验证结果：独立执行 `npm run build` 通过；独立执行 `mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；执行 `npm run screenshots:portfolio` 通过；执行 `node scripts/collect-portfolio-metrics.js --run-checks` 通过，内部 build / test 均通过；`git diff --check` 通过。
+- 编码与边界：`TODO.md`、`HANDOFF.md`、`docs/metrics/metrics_snapshot.md`、`docs/design_reviews/trace_evidence_review.md` 的前三字节均为 UTF-8 BOM；未发现 `content_reference` 或替换字符；`.local/reference_screenshots/` 保持 ignored，未进入 Git；未提交真实 API Key，未声称真实 LLM、生产流量、向量数据库或完整多 Agent Runtime。
+- 已知风险：Vite build 仍有既有 VueUse PURE 注释提示及 Element Plus / Markdown 大 chunk 警告；metrics 脚本的默认关键接口仍检查 8080，因此快照继续诚实标记该项“未采集”；Request Changes / 驳回仍是 disabled 预留控制，因为后端没有对应 API。
+
+## 2026-07-04 - Codex - 第一阶段前端作品集化 UI 改造
+
+- 做了什么：用户明确确认“这个前端方向，可以开工”后，按 `docs/frontend_reference_research.md`、`docs/frontend_moodboard.md`、`docs/frontend_reference_screenshot_index.md`、`docs/frontend_showcase_design.md` 和 `docs/metrics/metrics_snapshot.md` 执行第一阶段前端展示改造。未接真实 API Key，未复制第三方参考截图 / Logo / 文案，未把 local-rule 包装成真实 LLM。
+- 全局视觉：`frontend/src/styles/theme.css` 切换为深色开发者工具风格、Runtime Mint 信号色、蓝黑 / 石墨黑背景、弱边框、低阴影、6px 圆角；App Shell 保持 220px Sidebar、52px Topbar、24px page padding、16px panel padding / grid gap。
+- 导航：`frontend/src/router/index.ts` 重排为工作流、可观测性、知识与引用、治理与审核、配置；新增独立 `/reviews` Human Review 路由。Provider / Settings 保持 disabled，提示 `配置预留 / 当前通过环境变量配置`。
+- Dashboard：`DashboardView.vue` 增加 Product Evidence Hero、本地 Demo / local-rule fallback / OpenAI-compatible 可选 / 本地 metrics_snapshot 数据来源声明；强化今日运行、成功率、平均耗时、待人工复核、工具调用、知识库命中、最近运行、Provider Health、Metrics Snapshot、执行证据等模块。
+- Workbench：`WorkbenchView.vue` 强化 AI Coding 工作台信息架构：需求与上下文、Prompt 模板、Provider 状态、Knowledge References、Artifact Preview、Change Summary、Trace Summary、Tool Calls Timeline 和 Human Review 停点；`Request Changes` 作为 disabled 决策位，明确当前后端未提供 API。
+- Trace Evidence：`AgentRunTraceView.vue` 重构为 Run list + Timeline / Steps / Spans + Step Inspector + Raw JSON / Rendered Prompt / Fallback Reason / Tool I/O tabs；Timeline 使用中文步骤 `01 Prompt 渲染` 至 `07 已确认 / 已驳回`，缺失字段显式标注未采集。
+- Human Review：新增 `frontend/src/views/HumanReviewView.vue`，独立展示复核队列、风险标签、Artifact 预览、人工复核决策面板、复核原因、状态历史和为什么需要人工复核；通过按钮沿用现有 save/confirm 状态机，要求修改 / 驳回 / 重新生成保持 disabled 并说明后端未提供对应 API。
+- Knowledge / Prompt：`KnowledgeBaseView.vue` 和 `PromptTemplatesView.vue` 仅做轻量视觉与链路文案对齐，分别突出 `Document -> Chunk -> Search -> Citation -> Generation Reference`、`Template -> Variables -> Render Preview -> Test Run -> Trace metadata`。
+- 截图：`scripts/capture-portfolio-screenshots.mjs` viewport 改为 1440x1000，并将 Human Review 截图入口改为 `/reviews`。执行 `cd frontend && npm run screenshots:portfolio` 成功，生成 / 更新 `docs/images/dashboard-agentic.png`、`workbench-running.png`、`agent-run-trace.png`、`knowledge-base-rag.png`、`prompt-studio.png`、`human-review-trace-detail.png`，均来自本地真实运行页面。
+- 指标：执行 `node scripts/collect-portfolio-metrics.js --run-checks` 成功并刷新 `docs/metrics/metrics_snapshot.md`；当前快照显示前端页面文件 8 个、真实 component route 8 个、redirect route 1 个、disabled nav item 3 个，`npm run build` 和 `mvn test` 均通过。
+- 验证证据：`cd frontend && npm run build` 通过；`cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`git diff --check` 通过，仅 LF/CRLF 提示；敏感模式扫描未发现真实 Key 形态。
+- 服务处理：为截图临时启动了后端 `18081` 和前端 `5175`，确认截图后已关闭本轮启动的进程；原本已存在的 `5174` 旧服务未改动。
+- 保留边界：`.local/` 与 `.local/reference_screenshots/` 仍为 ignored；未把任何第三方参考截图放入 `docs/images` 或 README；README 本轮未修改。
+- 下一步：建议用户先人工确认 `docs/images/` 最新截图，再决定是否进入第二阶段 README 截图展示、简历文案和页面细节 polish。
+
 ## 2026-07-04 - Codex - 公开前端参考截图采集与索引
 
 - 做了什么：按用户新增要求，只做公开前端参考截图采集和索引，不改 Vue、CSS、README、截图脚本，不进入前端代码改造。先检查 `.gitignore`，确认原本未忽略 `.local/`，随后补充 `.local/` 和 `.local/reference_screenshots/`。

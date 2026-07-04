@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -12,12 +12,12 @@ const baseUrl = process.env.DEVFLOW_SCREENSHOT_URL || 'http://127.0.0.1:5174'
 const apiUrl = process.env.DEVFLOW_API_URL || 'http://127.0.0.1:18081/api'
 
 const shots = [
-  { route: '/', file: 'dashboard-agentic.png', waitFor: '.dashboard' },
-  { route: '/workbench', file: 'workbench-running.png', waitFor: '.workbench', prepare: prepareWorkbench },
-  { route: '/agent-runs', file: 'agent-run-trace.png', waitFor: '.agent-trace-page', query: demo => `?generationRecordId=${demo.recordId}` },
+  { route: '/', file: 'dashboard.png', aliases: ['dashboard-agentic.png'], waitFor: '.dashboard' },
+  { route: '/workbench', file: 'workbench.png', aliases: ['workbench-running.png'], waitFor: '.workbench', prepare: prepareWorkbench },
+  { route: '/agent-runs', file: 'trace-evidence.png', aliases: ['agent-run-trace.png'], waitFor: '.agent-trace-page', query: demo => `?generationRecordId=${demo.recordId}` },
   { route: '/knowledge', file: 'knowledge-base-rag.png', waitFor: '.knowledge-page' },
   { route: '/prompts', file: 'prompt-studio.png', waitFor: '.templates-page', prepare: preparePromptStudio },
-  { route: '/agent-runs', file: 'human-review-trace-detail.png', waitFor: '.agent-trace-page', query: demo => `?generationRecordId=${demo.recordId}` },
+  { route: '/reviews', file: 'human-review.png', aliases: ['human-review-trace-detail.png'], waitFor: '.human-review-page' },
 ]
 
 async function importPlaywright() {
@@ -98,6 +98,17 @@ async function ensureDemoState() {
   return { projectId, recordId: result.recordId, agentRunId: result.agentRunId }
 }
 
+async function verifyFrontendApiProxy() {
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/dashboard/stats`)
+  if (!response.ok) {
+    throw new Error(`Frontend /api proxy failed with HTTP ${response.status}. Start Vite with VITE_API_PROXY_TARGET=${apiUrl.replace(/\/api$/, '')}`)
+  }
+  const payload = await response.json()
+  if (payload.code !== 0 || !payload.data?.agentRunCount || !payload.data?.promptTemplateCount) {
+    throw new Error(`Frontend /api proxy does not expose the prepared demo data. Start Vite with VITE_API_PROXY_TARGET=${apiUrl.replace(/\/api$/, '')}`)
+  }
+}
+
 async function preparePage(page) {
   await page.addStyleTag({
     content: `
@@ -133,6 +144,7 @@ async function capture() {
   await waitForService(baseUrl, 'Frontend')
 
   const demo = await ensureDemoState()
+  await verifyFrontendApiProxy()
   const { chromium } = await importPlaywright()
   await mkdir(imageDir, { recursive: true })
 
@@ -142,7 +154,7 @@ async function capture() {
   } catch {
     browser = await chromium.launch({ headless: true, args: ['--hide-scrollbars'] })
   }
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1040 }, deviceScaleFactor: 1 })
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 })
 
   try {
     for (const shot of shots) {
@@ -154,8 +166,14 @@ async function capture() {
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.waitForTimeout(500)
       const file = path.join(imageDir, shot.file)
-      await page.screenshot({ path: file, fullPage: false, animations: 'disabled' })
-      console.log(path.relative(rootDir, file))
+      const screenshot = await page.screenshot({ path: file, fullPage: false, animations: 'disabled' })
+      const outputFiles = [file]
+      for (const alias of shot.aliases || []) {
+        const aliasFile = path.join(imageDir, alias)
+        await writeFile(aliasFile, screenshot)
+        outputFiles.push(aliasFile)
+      }
+      outputFiles.forEach(outputFile => console.log(path.relative(rootDir, outputFile)))
     }
   } finally {
     await browser.close()
