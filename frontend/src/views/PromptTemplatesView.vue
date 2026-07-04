@@ -605,18 +605,18 @@ onMounted(loadPageData)
       <div class="hero-copy">
         <span class="mono">PROMPT STUDIO</span>
         <h2>提示词工作室</h2>
-        <p>Prompt 模板 -> 变量配置 -> 渲染预览 -> 测试运行 -> Trace / Human Review</p>
+        <p>Template -> Variables -> Render Preview -> Test Run -> Trace metadata，试运行仍走真实生成接口。</p>
       </div>
       <div class="hero-pipeline" aria-label="Prompt 工作流">
-        <span>模板</span>
+        <span>Template</span>
         <i></i>
-        <span>变量</span>
+        <span>Variables</span>
         <i></i>
-        <span>渲染</span>
+        <span>Render Preview</span>
         <i></i>
-        <span>测试</span>
+        <span>Test Run</span>
         <i></i>
-        <span>Trace</span>
+        <span>Trace metadata</span>
       </div>
     </header>
 
@@ -1033,8 +1033,8 @@ onMounted(loadPageData)
   border: var(--border-default);
   border-radius: var(--radius-card);
   background:
-    linear-gradient(135deg, rgba(124, 92, 255, 0.2), transparent 38%),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.08), transparent 54%),
+    linear-gradient(135deg, rgba(56, 226, 173, 0.13), transparent 42%),
+    linear-gradient(90deg, rgba(78, 161, 255, 0.08), transparent 54%),
     var(--color-card);
   box-shadow: var(--shadow-card);
   overflow: hidden;

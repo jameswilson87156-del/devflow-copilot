@@ -452,15 +452,15 @@ onMounted(loadPage)
       <div>
         <p class="eyebrow mono">Knowledge / RAG</p>
         <h2>知识库</h2>
-        <p>管理知识文档、Chunk 切片、关键词检索结果与生成引用，把文档到 Trace 的引用链路留在同一张工作台。</p>
+        <p>Document -> Chunk -> Search -> Citation -> Generation Reference，把文档到 Trace 的引用链路留在同一张工作台。</p>
       </div>
       <div class="pipeline-strip" aria-label="知识引用链路">
-        <span>文档</span>
+        <span>Document</span>
         <span>Chunk</span>
-        <span>检索</span>
-        <span>引用</span>
-        <span>生成</span>
-        <span>Trace</span>
+        <span>Search</span>
+        <span>Citation</span>
+        <span>Generation</span>
+        <span>Reference</span>
       </div>
     </header>
 

@@ -30,7 +30,7 @@ const groups = computed(() => {
     <div class="workspace-label">
       <span class="mono">当前工作空间</span>
       <strong>DevFlow Copilot</strong>
-      <small>local-rule fallback / MVP</small>
+      <small>Demo Data / local-rule fallback</small>
     </div>
 
     <nav class="nav-stack">
@@ -57,8 +57,8 @@ const groups = computed(() => {
     <div class="sidebar-status">
       <div class="pulse-dot"></div>
       <div>
-        <strong>本地规则引擎</strong>
-        <span>生成结果需人工确认</span>
+        <strong>本地 Demo 模式</strong>
+        <span>Provider 通过环境变量配置</span>
       </div>
     </div>
   </aside>

@@ -568,8 +568,8 @@ onMounted(loadPageData)
     <header class="workbench-header">
       <div>
         <span class="mono header-kicker">DEVFLOW / WORKBENCH</span>
-        <h1>DevFlow 工作台</h1>
-        <p>输入 AI Coding 任务，选择项目上下文和 Prompt 模板，运行 Provider 调用并进入 Human Review。</p>
+        <h1>AI Coding 工作台</h1>
+        <p>需求与上下文、Prompt 模板、Provider 状态、Knowledge References、生成 Artifact、Trace Summary 和 Human Review 在同一条工作流中闭环。</p>
       </div>
       <div class="header-actions">
         <StatusBadge :status="displayStatus" :label="statusText(displayStatus)" />
@@ -579,7 +579,7 @@ onMounted(loadPageData)
 
     <main class="workbench-shell">
       <aside class="left-pane">
-        <SectionCard title="任务输入" subtitle="真实生成请求仍由任务类型、项目、Prompt、输入文本组成" eyebrow="Task Config">
+        <SectionCard title="需求与上下文" subtitle="真实生成请求仍由任务类型、项目、Prompt、输入文本组成" eyebrow="Task Config">
           <div class="form-grid">
             <label>
               <span>任务标题</span>
@@ -693,7 +693,7 @@ onMounted(loadPageData)
       </aside>
 
       <section class="center-pane">
-        <SectionCard class="result-card" title="生成结果" subtitle="预览、差异、原始响应和 JSON 结构化视图" eyebrow="Generated Artifact">
+        <SectionCard class="result-card" title="生成结果预览 / Artifact Preview" subtitle="预览、差异、原始响应和 JSON 结构化视图" eyebrow="Generated Artifact">
           <template #actions>
             <div class="result-actions">
               <StatusBadge :status="displayStatus" :label="statusText(displayStatus)" />
@@ -732,7 +732,7 @@ onMounted(loadPageData)
           </div>
         </SectionCard>
 
-        <SectionCard title="结构化响应" :subtitle="structuredArtifact.source === 'response-json' ? '来自响应 JSON' : '从响应文本安全派生，不伪装后端字段'" eyebrow="Structured Response" compact>
+        <SectionCard title="变更摘要 / Change Summary" :subtitle="structuredArtifact.source === 'response-json' ? '来自响应 JSON' : '从响应文本安全派生，不伪装后端字段'" eyebrow="Structured Response" compact>
           <div class="structured-grid">
             <div><span>status</span><strong class="mono">{{ structuredArtifact.status }}</strong></div>
             <div><span>module</span><strong>{{ structuredArtifact.module }}</strong></div>
@@ -767,6 +767,7 @@ onMounted(loadPageData)
               <el-icon><RefreshRight /></el-icon>
               重新生成
             </button>
+            <button class="ghost-action" type="button" disabled title="当前后端未提供 Request Changes API，仅作为 Human Review 决策位展示">Request Changes</button>
             <button class="ghost-action" type="button" :disabled="!canSave" @click="saveCurrent">保存记录</button>
             <button class="primary-action" type="button" :disabled="!canConfirm" @click="confirmCurrent">
               <el-icon><CircleCheck /></el-icon>
@@ -777,7 +778,7 @@ onMounted(loadPageData)
       </section>
 
       <aside class="right-pane">
-        <SectionCard title="执行详情" subtitle="来自生成响应、Generation Trace 与 Agent Run Trace" eyebrow="Execution">
+        <SectionCard title="Provider 状态" subtitle="来自生成响应、Generation Trace 与 Agent Run Trace" eyebrow="Provider Status">
           <div class="detail-grid">
             <span>Provider</span><ProviderBadge :provider="result?.providerName || WORKBENCH_SAFE_FALLBACK.providerName" :model="result?.modelName || WORKBENCH_SAFE_FALLBACK.modelName" />
             <span>Model</span><strong class="mono">{{ result?.modelName || WORKBENCH_SAFE_FALLBACK.modelName }}</strong>
@@ -791,7 +792,7 @@ onMounted(loadPageData)
           <button class="wide-link" type="button" @click="openTrace">查看完整 Trace</button>
         </SectionCard>
 
-        <SectionCard title="知识引用" :subtitle="`${knowledgeReferences.length} 条引用`" eyebrow="Knowledge">
+        <SectionCard title="Knowledge References" :subtitle="`${knowledgeReferences.length} 条知识引用`" eyebrow="Knowledge">
           <template #actions>
             <button class="section-link" type="button" @click="openKnowledge">
               查看全部
@@ -820,7 +821,7 @@ onMounted(loadPageData)
           <button class="wide-link" type="button" @click="openTrace">打开审核面板</button>
         </SectionCard>
 
-        <SectionCard title="工具调用摘要" subtitle="来自 Agent Run Trace 的 tool_call_record" eyebrow="Tool Calls">
+        <SectionCard title="Tool Calls Timeline" subtitle="来自 Agent Run Trace 的 tool_call_record" eyebrow="Tool Calls">
           <div class="tool-summary">
             <div><strong>{{ toolSummary.total }}</strong><span>总调用</span></div>
             <div><strong>{{ toolSummary.success }}</strong><span>成功</span></div>
@@ -836,7 +837,7 @@ onMounted(loadPageData)
     </main>
 
     <section class="trace-bottom">
-      <SectionCard title="生成追踪" subtitle="Agent Step / Generation Trace" eyebrow="Trace" compact>
+      <SectionCard title="Trace Summary" subtitle="Agent Step / Generation Trace" eyebrow="Trace" compact>
         <div class="trace-list">
           <div v-if="!traceRows.length" class="empty-state">运行工作流后显示真实生成追踪。</div>
           <article v-for="row in traceRows" :key="row.key" class="trace-row">
@@ -893,7 +894,7 @@ onMounted(loadPageData)
 <style scoped>
 .workbench-redesign {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   min-width: 0;
 }
@@ -946,8 +947,8 @@ onMounted(loadPageData)
 
 .workbench-shell {
   display: grid;
-  grid-template-columns: minmax(300px, 0.82fr) minmax(430px, 1.26fr) minmax(310px, 0.92fr);
-  gap: 12px;
+  grid-template-columns: minmax(280px, 0.28fr) minmax(430px, 0.46fr) minmax(300px, 0.26fr);
+  gap: 16px;
   min-width: 0;
   align-items: start;
 }
@@ -956,7 +957,7 @@ onMounted(loadPageData)
 .center-pane,
 .right-pane {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -1378,6 +1379,15 @@ button:disabled {
   padding: 7px 0;
 }
 
+.reference-list article > div {
+  min-width: 0;
+}
+
+.reference-list strong,
+.reference-list small {
+  display: block;
+}
+
 .reference-list span {
   color: var(--color-success);
   text-align: right;
@@ -1436,7 +1446,7 @@ button:disabled {
 .trace-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(260px, 0.74fr) minmax(280px, 0.88fr);
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   align-items: start;
 }

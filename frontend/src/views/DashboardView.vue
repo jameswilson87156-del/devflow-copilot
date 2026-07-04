@@ -61,9 +61,17 @@ const DASHBOARD_SAFE_FALLBACK = {
 const WORKFLOW_STEPS = [
   { key: 'Prompt', label: 'Prompt', desc: '模板渲染' },
   { key: 'Provider', label: 'Provider', desc: '模型路由' },
-  { key: 'Tool Call', label: 'Tool Call', desc: '工具调用' },
   { key: 'Trace', label: 'Trace', desc: '过程记录' },
+  { key: 'Tool Call', label: 'Tool Call', desc: '工具调用' },
   { key: 'Human Review', label: 'Human Review', desc: '人工审核' },
+] as const
+
+const METRICS_SNAPSHOT_ROWS = [
+  { label: '前端页面', value: '8', detail: 'Vue 页面文件' },
+  { label: '真实路由', value: '8', detail: 'component route' },
+  { label: '后端接口', value: '30', detail: 'endpoint mapping' },
+  { label: '后端测试', value: '20', detail: '@Test 覆盖' },
+  { label: '截图文件', value: '13', detail: '本地页面截图' },
 ] as const
 
 const router = useRouter()
@@ -99,11 +107,14 @@ const humanReviews = computed(() => traceSnapshots.value.flatMap((trace) => {
     record: trace.run.generationRecordId ? generationById.value.get(trace.run.generationRecordId) : undefined,
   }))
 }))
+const pendingReviewCount = computed(() => {
+  return humanReviews.value.filter((review) => ['PENDING', 'READY_FOR_REVIEW', 'WAITING_REVIEW'].includes(normalizeStatus(review.reviewStatus))).length
+})
 
 const kpiItems = computed(() => {
   const items: Array<{ label: string; value: string | number; code: string; tone: MetricTone }> = [
     {
-      label: '今日运行数',
+      label: '今日运行',
       value: stats.value.todayGenerationCount,
       code: 'Runs',
       tone: 'accent',
@@ -121,8 +132,8 @@ const kpiItems = computed(() => {
       tone: 'running',
     },
     {
-      label: '人工审核',
-      value: stats.value.humanReviewCount,
+      label: '待人工复核',
+      value: pendingReviewCount.value,
       code: 'Human Review',
       tone: 'warning',
     },
@@ -262,6 +273,8 @@ function statusLabel(status: string, confirmed = false) {
     DRAFT: '草稿',
     GENERATING: '运行中',
     READY_FOR_REVIEW: '待审核',
+    WAITING_REVIEW: '待复核',
+    PENDING: '待复核',
     SAVED: '已保存',
     CONFIRMED: '已确认',
     FAILED: '失败',
@@ -394,7 +407,7 @@ async function loadDashboard() {
     agentRuns.value = runData
     knowledgeDocuments.value = documentData
 
-    const latestRuns = sortByTime(runData).slice(0, 4)
+    const latestRuns = sortByTime(runData)
     const traces = await Promise.all(
       latestRuns.map((run) => fetchAgentRunTrace(run.id).catch(() => undefined)),
     )
@@ -420,21 +433,26 @@ onMounted(loadDashboard)
       <div class="hero-copy">
         <span class="hero-kicker mono">DEVFLOW / AI CODING WORKFLOW</span>
         <h1 id="dashboard-title">DevFlow Copilot</h1>
-        <h2>Agentic Coding 工作流控制台</h2>
-        <p>Prompt、Provider、Trace、Knowledge、Human Review</p>
+        <h2>AI Coding 工作台 / Agentic Workflow 控制台</h2>
+        <p>本地 Demo 模式，默认使用 local-rule fallback；OpenAI-compatible Provider 可选，真实 Key 仅通过环境变量配置。</p>
+        <div class="hero-signal-row" aria-label="本地演示边界">
+          <span><i></i>本地 Demo 模式</span>
+          <span><i></i>local-rule fallback</span>
+          <span><i></i>数据来源：本地 metrics_snapshot</span>
+        </div>
         <div class="hero-actions">
           <button class="primary-action" type="button" @click="router.push('/workbench')">
             <el-icon><Plus /></el-icon>
             新建 Workflow
           </button>
           <button class="ghost-action" type="button" @click="router.push('/agent-runs')">
-            查看 Trace
+            查看 Trace Evidence
             <el-icon><ArrowRight /></el-icon>
           </button>
         </div>
       </div>
 
-      <div class="hero-workflow" aria-label="Agent Workflow Overview">
+      <div class="hero-workflow" aria-label="Prompt Provider Trace Tool Call Human Review">
         <div class="workflow-card-mini" v-for="(step, index) in WORKFLOW_STEPS" :key="step.key">
           <span class="workflow-node mono">{{ index + 1 }}</span>
           <strong>{{ step.label }}</strong>
@@ -454,13 +472,13 @@ onMounted(loadDashboard)
       />
     </section>
     <p class="data-source-note">
-      KPI 主统计来自 <span class="mono">GET /api/dashboard/stats</span>；Tool Call 与 RAG Hits 由现有 Trace / Knowledge 引用接口派生，缺失时显示 0。
+      Demo Data / 来源：本地指标快照。KPI 主统计来自 <span class="mono">GET /api/dashboard/stats</span>；Tool Call、RAG Hits 与待复核由现有 Trace / Knowledge 接口派生，缺失时显示 0。
     </p>
 
     <main class="dashboard-grid">
       <SectionCard
         class="recent-runs-card"
-        title="最近智能体运行"
+        title="最近运行"
         subtitle="来自 agent-runs 与 dashboard/stats 的最近运行记录"
         eyebrow="Agent Runs"
       >
@@ -503,7 +521,7 @@ onMounted(loadDashboard)
 
       <SectionCard
         class="prompts-card"
-        title="启用中的 Prompt 模板"
+        title="Prompt 模板"
         subtitle="只展示已启用模板，不写死使用次数"
         eyebrow="Prompt Studio"
       >
@@ -554,7 +572,17 @@ onMounted(loadDashboard)
         </div>
       </SectionCard>
 
-      <SectionCard class="review-card" title="最近人工审核" subtitle="来自 Agent Run Trace 的 Human Review 明细" eyebrow="Human Review">
+      <SectionCard class="metrics-snapshot-card" title="Metrics Snapshot" subtitle="Demo Data / 来源：本地指标快照" eyebrow="Portfolio Evidence">
+        <div class="snapshot-list">
+          <article v-for="row in METRICS_SNAPSHOT_ROWS" :key="row.label" class="snapshot-row">
+            <span>{{ row.label }}</span>
+            <strong class="mono">{{ row.value }}</strong>
+            <small>{{ row.detail }}</small>
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard class="review-card" title="复核队列" subtitle="来自 Agent Run Trace 的 Human Review 明细" eyebrow="Human Review">
         <div class="review-list">
           <div v-if="!humanReviews.length" class="empty-state">暂无 Human Review 明细。</div>
           <article v-for="review in humanReviews.slice(0, 5)" :key="review.id" class="review-row">
@@ -567,7 +595,7 @@ onMounted(loadDashboard)
         </div>
       </SectionCard>
 
-      <SectionCard class="knowledge-card" title="最新知识引用" subtitle="优先展示 generation_knowledge_reference 命中" eyebrow="Knowledge / RAG">
+      <SectionCard class="knowledge-card" title="知识引用" subtitle="Document -> Chunk -> Search -> Citation -> Generation Reference" eyebrow="Knowledge / RAG">
         <template #actions>
           <button class="section-link" type="button" @click="router.push('/knowledge')">
             查看知识库
@@ -588,7 +616,7 @@ onMounted(loadDashboard)
         </div>
       </SectionCard>
 
-      <SectionCard class="timeline-card" title="最近活动时间线" subtitle="生成、审核、日志诊断与知识引用统一按时间展示" eyebrow="Recent Activity">
+      <SectionCard class="timeline-card" title="执行证据" subtitle="生成、审核、日志诊断与知识引用统一按时间展示" eyebrow="Evidence Timeline">
         <div class="timeline-list">
           <div v-if="!timelineItems.length" class="empty-state">暂无最近活动。</div>
           <article v-for="item in timelineItems" :key="item.id" class="timeline-row" :data-tone="item.tone">
@@ -620,7 +648,7 @@ onMounted(loadDashboard)
 <style scoped>
 .dashboard-command {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   min-width: 0;
 }
@@ -635,8 +663,8 @@ onMounted(loadDashboard)
   border: var(--border-default);
   border-radius: var(--radius-card);
   background:
-    linear-gradient(135deg, rgba(124, 92, 255, 0.22), rgba(34, 211, 238, 0.05) 48%, rgba(59, 130, 246, 0.16)),
-    linear-gradient(90deg, rgba(11, 16, 32, 0.92), rgba(16, 24, 38, 0.96)),
+    linear-gradient(135deg, rgba(56, 226, 173, 0.14), rgba(94, 234, 212, 0.04) 48%, rgba(78, 161, 255, 0.11)),
+    linear-gradient(90deg, rgba(7, 16, 24, 0.94), rgba(12, 19, 28, 0.98)),
     var(--color-card);
   overflow: hidden;
 }
@@ -680,6 +708,37 @@ onMounted(loadDashboard)
   color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
+}
+
+.hero-signal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.hero-signal-row span {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(5, 8, 13, 0.48);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.hero-signal-row i {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  flex: 0 0 auto;
 }
 
 .hero-actions {
@@ -750,7 +809,7 @@ onMounted(loadDashboard)
   align-content: center;
   gap: 0;
   padding: 12px;
-  border: 1px solid rgba(124, 92, 255, 0.26);
+  border: 1px solid rgba(56, 226, 173, 0.24);
   border-radius: 8px;
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent),
@@ -806,6 +865,8 @@ onMounted(loadDashboard)
 .workflow-card-mini strong {
   margin-top: 8px;
   font-size: 12px;
+  line-height: 16px;
+  white-space: normal;
 }
 
 .workflow-card-mini small {
@@ -817,7 +878,7 @@ onMounted(loadDashboard)
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -836,7 +897,7 @@ onMounted(loadDashboard)
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.82fr) minmax(300px, 0.9fr);
   grid-auto-flow: dense;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   align-items: start;
 }
@@ -852,10 +913,51 @@ onMounted(loadDashboard)
 }
 
 .provider-card,
+.metrics-snapshot-card,
 .review-card,
 .knowledge-card,
 .prompts-card {
   min-height: 232px;
+}
+
+.snapshot-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-border-subtle);
+}
+
+.snapshot-row {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px minmax(82px, 0.9fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+}
+
+.snapshot-row span,
+.snapshot-row strong,
+.snapshot-row small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshot-row span,
+.snapshot-row small {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.snapshot-row strong {
+  color: var(--color-accent);
+  font-size: 14px;
 }
 
 .run-table-head,

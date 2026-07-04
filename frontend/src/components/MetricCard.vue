@@ -27,7 +27,7 @@ withDefaults(defineProps<{
   border: var(--border-default);
   border-radius: var(--radius-card);
   background:
-    linear-gradient(135deg, rgba(124, 92, 255, 0.12), transparent 48%),
+    linear-gradient(135deg, rgba(56, 226, 173, 0.1), transparent 52%),
     var(--color-card);
   box-shadow: var(--shadow-card);
 }

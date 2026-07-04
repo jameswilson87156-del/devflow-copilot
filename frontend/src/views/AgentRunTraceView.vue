@@ -1,40 +1,186 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
-import { RefreshRight } from '@element-plus/icons-vue'
+import { Check, Close, RefreshRight, Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { fetchAgentRunTrace, fetchAgentRuns, fetchProjects } from '@/api/devflow'
-import StatusTag from '@/components/StatusTag.vue'
-import type { AgentRun, AgentRunTrace, ProjectContext, ToolCallRecord } from '@/types/domain'
+import {
+  fetchAgentRunTrace,
+  fetchAgentRuns,
+  fetchGenerationTraces,
+  fetchGenerations,
+  fetchKnowledgeReferences,
+  fetchProjects,
+} from '@/api/devflow'
+import CodeBlock from '@/components/CodeBlock.vue'
+import ProviderBadge from '@/components/ProviderBadge.vue'
+import StatusBadge from '@/components/StatusBadge.vue'
+import type {
+  AgentRun,
+  AgentRunTrace,
+  AgentStep,
+  GenerationRecord,
+  GenerationTrace,
+  KnowledgeReference,
+  ProjectContext,
+  ToolCallRecord,
+} from '@/types/domain'
+
+type EvidenceTab = 'prompt' | 'fallback' | 'tools' | 'json'
+type Tone = 'success' | 'warning' | 'danger' | 'running'
+
+interface TimelineStep {
+  key: string
+  order: number
+  label: string
+  description: string
+  status: string
+  latencyMs?: number
+  step?: AgentStep
+  tone: Tone
+}
+
+const STEP_LABELS = [
+  'Prompt 渲染',
+  '知识命中',
+  'Provider 选择',
+  'Tool Call 模拟',
+  '生成记录',
+  '需要人工复核',
+  '已确认 / 已驳回',
+] as const
 
 const projects = shallowRef<ProjectContext[]>([])
 const runs = shallowRef<AgentRun[]>([])
+const records = shallowRef<GenerationRecord[]>([])
+const generationTraces = shallowRef<GenerationTrace[]>([])
+const references = shallowRef<KnowledgeReference[]>([])
 const selectedProjectId = shallowRef<number>()
 const selectedRunId = shallowRef<number>()
+const selectedStepKey = shallowRef('')
 const trace = shallowRef<AgentRunTrace>()
 const loading = shallowRef(false)
+const evidenceExpanded = shallowRef(false)
+const activeEvidenceTab = shallowRef<EvidenceTab>('prompt')
 const route = useRoute()
 
 const projectOptions = computed(() => [{ id: undefined, projectName: '全部项目' }, ...projects.value])
 const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunId.value))
-const toolCallsByStep = computed(() => {
-  const map = new Map<number, ToolCallRecord[]>()
-  for (const tool of trace.value?.toolCalls || []) {
-    if (!tool.stepId) continue
-    map.set(tool.stepId, [...(map.get(tool.stepId) || []), tool])
+const selectedRecord = computed(() => {
+  const recordId = trace.value?.run.generationRecordId || selectedRun.value?.generationRecordId
+  return records.value.find((record) => record.id === recordId)
+})
+const selectedGenerationTrace = computed(() => generationTraces.value[0])
+const toolCalls = computed(() => trace.value?.toolCalls || [])
+const humanReview = computed(() => trace.value?.humanReviews[0])
+const selectedTimelineStep = computed(() => {
+  return timelineSteps.value.find((item) => item.key === selectedStepKey.value) || timelineSteps.value[0]
+})
+const selectedToolCalls = computed(() => {
+  const stepId = selectedTimelineStep.value?.step?.id
+  if (!stepId) return toolCalls.value
+  return toolCalls.value.filter((tool) => tool.stepId === stepId)
+})
+
+const timelineSteps = computed<TimelineStep[]>(() => {
+  const actualSteps = [...(trace.value?.steps || [])].sort((a, b) => a.stepOrder - b.stepOrder)
+  return STEP_LABELS.map((label, index) => {
+    const order = index + 1
+    const step = actualSteps[index]
+    const status = step?.status || fallbackStatus(order)
+    return {
+      key: step ? `step-${step.id}` : `derived-${order}`,
+      order,
+      label,
+      description: step?.summary || fallbackDescription(label),
+      status,
+      latencyMs: step?.latencyMs,
+      step,
+      tone: statusTone(status),
+    }
+  })
+})
+
+const riskLevel = computed(() => {
+  const status = normalizeStatus(selectedTimelineStep.value?.status)
+  if (['FAILED', 'REJECTED', 'ERROR'].includes(status)) return { label: '高风险', tone: 'danger' as Tone }
+  if (['READY_FOR_REVIEW', 'PENDING', 'WAITING_REVIEW', 'SAVED'].includes(status)) return { label: '待复核', tone: 'warning' as Tone }
+  if (fallbackReason.value.includes('local-rule')) return { label: '本地演示', tone: 'warning' as Tone }
+  return { label: '低风险', tone: 'success' as Tone }
+})
+
+const reviewStatus = computed(() => humanReview.value?.reviewStatus || selectedRecord.value?.status || 'PENDING')
+const renderedPromptText = computed(() => {
+  return selectedRecord.value?.renderedPrompt
+    || selectedGenerationTrace.value?.renderedPromptSummary
+    || '当前接口未返回完整 Rendered Prompt；此处只展示真实字段，不生成替代 Prompt。'
+})
+const fallbackReason = computed(() => {
+  const provider = (trace.value?.run.providerName || selectedRecord.value?.providerName || '').toLowerCase()
+  const model = (trace.value?.run.modelName || selectedRecord.value?.modelName || '').toLowerCase()
+  if (provider.includes('local') || model.includes('local')) {
+    return 'local-rule fallback；本地演示模式不连接真实 API Key。'
   }
-  return map
+  return selectedRecord.value?.errorMessage || selectedGenerationTrace.value?.errorMessage || '当前 Trace 未返回 fallback / error 字段。'
+})
+const coreReason = computed(() => {
+  return humanReview.value?.comment
+    || selectedRecord.value?.errorMessage
+    || selectedTimelineStep.value?.description
+    || '生成结果需要人工检查输出边界、状态机和可解释证据后再确认。'
+})
+const rawJson = computed(() => JSON.stringify({
+  run: trace.value?.run,
+  timeline: timelineSteps.value.map((item) => ({
+    order: item.order,
+    label: item.label,
+    status: item.status,
+    latencyMs: item.latencyMs,
+    description: item.description,
+  })),
+  toolCalls: toolCalls.value,
+  humanReviews: trace.value?.humanReviews,
+  generationTrace: selectedGenerationTrace.value,
+  knowledgeReferences: references.value,
+  dataSource: 'Demo Data / 来源：本地 Trace 接口与本地指标快照',
+}, null, 2))
+const toolIoJson = computed(() => JSON.stringify(selectedToolCalls.value.map((tool) => ({
+  toolName: tool.toolName,
+  inputSummary: tool.inputSummary || '未记录',
+  outputSummary: tool.outputSummary || '未记录',
+  status: tool.status,
+  latencyMs: tool.latencyMs,
+})), null, 2))
+const evidenceCode = computed(() => {
+  if (activeEvidenceTab.value === 'prompt') return renderedPromptText.value
+  if (activeEvidenceTab.value === 'fallback') return fallbackReason.value
+  if (activeEvidenceTab.value === 'tools') return toolIoJson.value
+  return rawJson.value
+})
+const evidenceLanguage = computed(() => {
+  if (activeEvidenceTab.value === 'tools' || activeEvidenceTab.value === 'json') return 'json'
+  if (activeEvidenceTab.value === 'prompt') return 'markdown'
+  return 'text'
+})
+const evidenceTitle = computed(() => {
+  const map: Record<EvidenceTab, string> = {
+    prompt: 'Rendered Prompt',
+    fallback: 'Fallback Reason',
+    tools: 'Tool I/O',
+    json: 'Raw JSON',
+  }
+  return map[activeEvidenceTab.value]
 })
 
 async function loadRuns() {
   loading.value = true
   try {
     const queryGenerationId = Number(route.query.generationRecordId)
-    if (queryGenerationId) {
-      runs.value = await fetchAgentRuns({ generationRecordId: queryGenerationId })
-    } else {
-      runs.value = await fetchAgentRuns({ projectId: selectedProjectId.value })
-    }
+    const [recordData, runData] = await Promise.all([
+      fetchGenerations(),
+      queryGenerationId ? fetchAgentRuns({ generationRecordId: queryGenerationId }) : fetchAgentRuns({ projectId: selectedProjectId.value }),
+    ])
+    records.value = recordData
+    runs.value = runData
     selectedRunId.value = runs.value.find((run) => run.id === selectedRunId.value)?.id || runs.value[0]?.id
     await loadTrace()
   } catch (error) {
@@ -47,9 +193,20 @@ async function loadRuns() {
 async function loadTrace() {
   if (!selectedRunId.value) {
     trace.value = undefined
+    generationTraces.value = []
+    references.value = []
     return
   }
+
   trace.value = await fetchAgentRunTrace(selectedRunId.value)
+  const recordId = trace.value.run.generationRecordId
+  const [traceRows, referenceRows] = await Promise.all([
+    recordId ? fetchGenerationTraces({ generationRecordId: recordId }).catch(() => [] as GenerationTrace[]) : Promise.resolve([]),
+    recordId ? fetchKnowledgeReferences(recordId).catch(() => [] as KnowledgeReference[]) : Promise.resolve([]),
+  ])
+  generationTraces.value = traceRows
+  references.value = referenceRows
+  selectedStepKey.value = timelineSteps.value[0]?.key || ''
 }
 
 async function loadPageData() {
@@ -57,724 +214,931 @@ async function loadPageData() {
   await loadRuns()
 }
 
-function statusTone(status?: string) {
-  const value = (status || '').toUpperCase()
-  if (['SUCCESS', 'CONFIRMED', 'WAITING_REVIEW', 'SAVED'].includes(value)) return 'success'
-  if (['FAILED', 'REJECTED'].includes(value)) return 'failed'
-  if (['WAITING', 'PENDING', 'RUNNING'].includes(value)) return 'running'
-  return 'idle'
+async function selectRun(id: number) {
+  selectedRunId.value = id
+  await loadTrace()
+}
+
+function fallbackStatus(order: number) {
+  if (order <= 4 && trace.value) return 'SUCCESS'
+  if (order === 6) return humanReview.value?.reviewStatus || 'READY_FOR_REVIEW'
+  if (order === 7) return selectedRecord.value?.status || 'PENDING'
+  return selectedRecord.value?.status || 'PENDING'
+}
+
+function fallbackDescription(label: string) {
+  const map: Record<string, string> = {
+    'Prompt 渲染': selectedGenerationTrace.value?.renderedPromptSummary || '接收生成请求并绑定项目上下文。',
+    '知识命中': references.value.length ? `命中 ${references.value.length} 条知识引用，用于生成参考。` : '本次运行未返回知识引用，显示为未采集。',
+    'Provider 选择': `${trace.value?.run.providerName || selectedRecord.value?.providerName || 'local-rule fallback'} 负责本次生成路由。`,
+    'Tool Call 模拟': toolCalls.value.length ? `记录 ${toolCalls.value.length} 条 Tool Call 输入输出摘要。` : '当前 Trace 未返回 Tool Call 明细。',
+    '生成记录': selectedRecord.value ? `生成记录 generation_${selectedRecord.value.id} 已写入状态机。` : '当前运行未关联生成记录。',
+    '需要人工复核': humanReview.value?.comment || '生成结果停在 Human Review，等待人工确认。',
+    '已确认 / 已驳回': selectedRecord.value ? statusText(selectedRecord.value.status) : '尚未完成最终决策。',
+  }
+  return map[label] || '当前步骤无补充说明。'
+}
+
+function normalizeStatus(status?: string) {
+  if (!status) return 'PENDING'
+  const map: Record<string, string> = {
+    Draft: 'DRAFT',
+    Generating: 'GENERATING',
+    'Ready for Review': 'READY_FOR_REVIEW',
+    Saved: 'SAVED',
+    Confirmed: 'CONFIRMED',
+    Failed: 'FAILED',
+  }
+  return map[status] || status.toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_')
+}
+
+function statusText(status?: string) {
+  const labels: Record<string, string> = {
+    DRAFT: '草稿',
+    GENERATING: '运行中',
+    RUNNING: '运行中',
+    READY_FOR_REVIEW: '待人工复核',
+    WAITING_REVIEW: '待人工复核',
+    PENDING: '待人工复核',
+    SAVED: '已保存',
+    CONFIRMED: '已确认',
+    SUCCESS: '成功',
+    FAILED: '失败',
+    REJECTED: '已驳回',
+  }
+  return labels[normalizeStatus(status)] || status || '未记录'
+}
+
+function statusTone(status?: string): Tone {
+  const normalized = normalizeStatus(status)
+  if (['CONFIRMED', 'SAVED', 'SUCCESS', 'PASSED'].includes(normalized)) return 'success'
+  if (['FAILED', 'REJECTED', 'ERROR'].includes(normalized)) return 'danger'
+  if (['GENERATING', 'RUNNING'].includes(normalized)) return 'running'
+  return 'warning'
+}
+
+function formatDuration(value?: number) {
+  const ms = Math.max(value || 0, 0)
+  if (ms >= 1000) return `${(ms / 1000).toFixed(ms >= 10000 ? 1 : 2)}s`
+  return `${ms}ms`
 }
 
 function formatTime(value?: string) {
-  return value ? value.replace('T', ' ').slice(0, 19) : '—'
+  return value ? value.replace('T', ' ').slice(0, 16) : '未记录'
+}
+
+function shortText(value?: string, limit = 42) {
+  const clean = (value || '未命名运行').replace(/\s+/g, ' ').trim()
+  return clean.length > limit ? `${clean.slice(0, limit)}...` : clean
 }
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : '加载 Agent Run Trace 失败'
+  return error instanceof Error ? error.message : '加载 Trace Evidence 失败'
 }
 
 onMounted(loadPageData)
 </script>
 
 <template>
-  <div class="agent-trace-page trace-skin" v-loading="loading">
-    <section class="run-list trace-panel run-directory">
-      <div class="panel-header trace-section-header">
-        <div>
-          <h3 class="panel-title">Agent Run Trace</h3>
-          <p class="panel-subtitle">任务拆解、Prompt 渲染、Provider 调用、工具记录和人工确认</p>
+  <div class="agent-trace-page trace-redesign" v-loading="loading">
+    <header class="trace-hero">
+      <div class="trace-hero__copy">
+        <p class="eyebrow mono">TRACE EVIDENCE</p>
+        <h1>Trace Evidence</h1>
+        <p>可解释执行链路与 Human Review 工作台</p>
+        <div class="workflow-chain mono" aria-label="执行链路">
+          Prompt <span>-></span> Provider <span>-></span> Trace <span>-></span> Tool Call <span>-></span> Human Review
         </div>
-        <el-button class="refresh-action" :icon="RefreshRight" @click="loadRuns">刷新</el-button>
       </div>
-      <div class="run-filters trace-filter-bar">
-        <el-select v-model="selectedProjectId" placeholder="项目" @change="loadRuns">
+      <div class="trace-hero__status" aria-label="数据边界">
+        <span><i></i>Demo Data</span>
+        <span><i></i>本地模式</span>
+        <span><i></i>local-rule fallback</span>
+        <span><i></i>OpenAI-compatible 可选</span>
+      </div>
+    </header>
+
+    <main class="trace-stage">
+      <aside class="trace-panel run-panel">
+        <header class="panel-heading">
+          <div>
+            <span class="panel-eyebrow mono">RUN LIST</span>
+            <h2>运行记录</h2>
+          </div>
+          <button class="icon-button" type="button" @click="loadRuns">
+            <el-icon><RefreshRight /></el-icon>
+            刷新
+          </button>
+        </header>
+
+        <el-select v-model="selectedProjectId" class="project-filter" placeholder="全部项目" @change="loadRuns">
           <el-option v-for="project in projectOptions" :key="project.id ?? 'all'" :label="project.projectName" :value="project.id" />
         </el-select>
-      </div>
-      <div class="run-rows">
-        <div v-if="!runs.length" class="empty-state">暂无 Agent Run。先在 AI 工作台运行一次生成。</div>
-        <button
-          v-for="run in runs"
-          :key="run.id"
-          class="run-row trace-run-row"
-          :class="{ active: selectedRunId === run.id }"
-          type="button"
-          @click="selectedRunId = run.id; loadTrace()"
-        >
-          <span class="trace-node status-light" :class="statusTone(run.status)" aria-hidden="true"></span>
-          <span class="run-main">
-            <strong>{{ run.title }}</strong>
-            <small class="mono">RUN-{{ run.id }} · GEN-{{ run.generationRecordId || '—' }} · {{ formatTime(run.createdAt) }}</small>
-          </span>
-          <span class="run-meta">
-            <b class="status-badge" :class="statusTone(run.status)">{{ run.status }}</b>
-            <small class="mono">{{ run.latencyMs ?? 0 }}ms</small>
-          </span>
-        </button>
-      </div>
-    </section>
 
-    <section class="trace-detail">
-      <div v-if="selectedRun && trace" class="run-summary metrics-strip">
-        <div class="workflow-title">
-          <span class="mono">WORKFLOW</span>
-          <strong>{{ selectedRun.title }}</strong>
-          <small>{{ selectedRun.goal }}</small>
+        <div class="run-list">
+          <button
+            v-for="run in runs"
+            :key="run.id"
+            class="run-item"
+            :class="{ active: selectedRunId === run.id }"
+            type="button"
+            @click="selectRun(run.id)"
+          >
+            <i class="tone-dot" :data-tone="statusTone(run.status)" aria-hidden="true"></i>
+            <span>
+              <strong>{{ shortText(run.title) }}</strong>
+              <small class="mono">trace_{{ run.id }} / {{ formatTime(run.createdAt) }}</small>
+            </span>
+            <StatusBadge :status="run.status" :label="statusText(run.status)" />
+          </button>
+          <div v-if="!runs.length" class="empty-state">暂无运行记录。请先在 Workbench 运行一次本地 Demo。</div>
         </div>
-        <div class="summary-grid metrics-bar">
-          <div class="metric-cell metric-status"><span>状态</span><strong class="status-badge" :class="statusTone(trace.run.status)">{{ trace.run.status }}</strong></div>
-          <div class="metric-cell"><span>Provider</span><strong>{{ trace.run.providerName || 'local-rule' }}</strong></div>
-          <div class="metric-cell"><span>模型</span><strong>{{ trace.run.modelName || 'local-rule-mvp' }}</strong></div>
-          <div class="metric-cell"><span>耗时</span><strong class="mono">{{ trace.run.latencyMs ?? 0 }}ms</strong></div>
-        </div>
-      </div>
+      </aside>
 
-      <div v-if="trace" class="trace-grid">
-        <section class="steps-panel trace-panel trace-region">
-          <div class="panel-header trace-section-header">
-            <div>
-              <h3 class="panel-title">运行步骤</h3>
-              <p class="panel-subtitle">可解释的 Agent Workflow 记录，不模拟复杂多 Agent</p>
+      <section class="trace-panel timeline-panel">
+        <header class="panel-heading timeline-heading">
+          <div>
+            <span class="panel-eyebrow mono">TRACE TIMELINE</span>
+            <h2>执行时间线</h2>
+            <p>只保留关键步骤、状态和耗时，让执行证据成为截图主角。</p>
+          </div>
+          <ProviderBadge :provider="trace?.run.providerName || selectedRecord?.providerName || 'local-rule fallback'" :model="trace?.run.modelName || selectedRecord?.modelName" />
+        </header>
+
+        <div class="timeline-context">
+          <div>
+            <span>当前运行</span>
+            <strong>{{ selectedRun?.title || '未选择运行' }}</strong>
+            <small>{{ selectedRun?.goal || 'Demo Data / 来源：本地 Trace 接口' }}</small>
+          </div>
+          <div class="context-metrics">
+            <span><b class="mono">{{ references.length }}</b><small>知识命中</small></span>
+            <span><b class="mono">{{ toolCalls.length }}</b><small>Tool Call</small></span>
+            <span><b class="mono">{{ formatDuration(trace?.run.latencyMs || selectedRecord?.costTimeMs) }}</b><small>耗时</small></span>
+          </div>
+        </div>
+
+        <div class="timeline-list">
+          <article
+            v-for="step in timelineSteps"
+            :key="step.key"
+            class="timeline-step"
+            :class="{ active: selectedTimelineStep?.key === step.key }"
+            @click="selectedStepKey = step.key"
+          >
+            <span class="step-number mono">{{ String(step.order).padStart(2, '0') }}</span>
+            <span class="step-rail" aria-hidden="true"><i :data-tone="step.tone"></i></span>
+            <div class="step-copy">
+              <h3>{{ step.label }}</h3>
+              <p>{{ step.description }}</p>
             </div>
+            <StatusBadge :status="step.status" :label="statusText(step.status)" />
+            <span class="step-latency mono">{{ formatDuration(step.latencyMs) }}</span>
+          </article>
+        </div>
+      </section>
+
+      <aside class="trace-panel decision-panel">
+        <header class="panel-heading">
+          <div>
+            <span class="panel-eyebrow mono">INSPECTOR</span>
+            <h2>步骤详情</h2>
+            <p>人工复核决策区</p>
           </div>
-          <div class="step-list">
-            <article v-for="step in trace.steps" :key="step.id" class="step-row trace-step-row">
-              <span class="spine trace-spine">
-                <i class="spine-dot" :class="statusTone(step.status)"></i>
-              </span>
-              <div class="step-body trace-cell">
-                <div class="step-title">
-                  <strong>{{ step.stepOrder }}. {{ step.stepName }}</strong>
-                  <StatusTag :status="step.status" />
-                </div>
-                <p>{{ step.summary }}</p>
-                <small class="mono">{{ step.stepType }} · {{ step.latencyMs ?? 0 }}ms</small>
-                <div v-if="toolCallsByStep.get(step.id)?.length" class="tool-stack tool-ledger">
-                  <article v-for="tool in toolCallsByStep.get(step.id)" :key="tool.id" class="tool-entry">
-                    <strong>{{ tool.toolName }}</strong>
-                    <span>{{ tool.inputSummary }}</span>
-                    <small>{{ tool.outputSummary }}</small>
-                  </article>
-                </div>
-              </div>
-            </article>
-          </div>
+        </header>
+
+        <section class="current-step-card">
+          <span class="panel-eyebrow mono">CURRENT STEP</span>
+          <h3>{{ selectedTimelineStep ? `${String(selectedTimelineStep.order).padStart(2, '0')} ${selectedTimelineStep.label}` : '未选择步骤' }}</h3>
+          <p>{{ selectedTimelineStep?.description || '暂无步骤说明。' }}</p>
         </section>
 
-        <aside class="review-panel trace-panel trace-region review-inspector">
-          <div class="panel-header trace-section-header">
-            <div>
-              <h3 class="panel-title">Human Review</h3>
-              <p class="panel-subtitle">保存、确认或失败都会留下人工复核记录</p>
-            </div>
-          </div>
-          <div class="review-list">
-            <article v-for="review in trace.humanReviews" :key="review.id" class="review-row">
-              <span class="trace-node status-light" :class="statusTone(review.reviewStatus)" aria-hidden="true"></span>
-              <div>
-                <strong class="status-badge" :class="statusTone(review.reviewStatus)">{{ review.reviewStatus }}</strong>
-                <p>{{ review.comment }}</p>
-                <small class="mono">{{ review.reviewer || 'manual' }} · {{ formatTime(review.updatedAt || review.createdAt) }}</small>
-              </div>
-            </article>
-            <div v-if="!trace.humanReviews.length" class="empty-state">暂无人工确认记录</div>
-          </div>
-        </aside>
-      </div>
+        <div class="decision-actions" aria-label="人工复核决策">
+          <button class="decision-button approve" type="button" disabled>
+            <el-icon><Check /></el-icon>
+            通过
+          </button>
+          <button class="decision-button request" type="button" disabled>
+            <el-icon><Warning /></el-icon>
+            要求修改
+          </button>
+          <button class="decision-button reject" type="button" disabled>
+            <el-icon><Close /></el-icon>
+            驳回
+          </button>
+        </div>
 
-      <div v-else class="empty-detail trace-panel">选择一条 Agent Run 查看 Trace。</div>
+        <dl class="decision-grid">
+          <div>
+            <dt>风险等级</dt>
+            <dd><span class="risk-pill" :data-tone="riskLevel.tone">{{ riskLevel.label }}</span></dd>
+          </div>
+          <div>
+            <dt>Provider</dt>
+            <dd><ProviderBadge :provider="trace?.run.providerName || selectedRecord?.providerName || 'local-rule fallback'" :model="trace?.run.modelName || selectedRecord?.modelName" /></dd>
+          </div>
+          <div>
+            <dt>Token</dt>
+            <dd class="mono">{{ selectedRecord?.totalTokens || '未采集' }}</dd>
+          </div>
+          <div>
+            <dt>Fallback</dt>
+            <dd>{{ fallbackReason }}</dd>
+          </div>
+          <div>
+            <dt>Human Review 状态</dt>
+            <dd><StatusBadge :status="reviewStatus" :label="statusText(reviewStatus)" /></dd>
+          </div>
+          <div>
+            <dt>核心原因</dt>
+            <dd>{{ coreReason }}</dd>
+          </div>
+        </dl>
+
+      </aside>
+    </main>
+
+    <section class="evidence-drawer" :class="{ expanded: evidenceExpanded }">
+      <header class="evidence-header">
+        <div>
+          <span class="panel-eyebrow mono">EVIDENCE DRAWER</span>
+          <h2>原始证据</h2>
+        </div>
+        <div class="evidence-controls">
+          <button type="button" :class="{ active: activeEvidenceTab === 'prompt' }" @click="activeEvidenceTab = 'prompt'">Rendered Prompt</button>
+          <button type="button" :class="{ active: activeEvidenceTab === 'fallback' }" @click="activeEvidenceTab = 'fallback'">Fallback Reason</button>
+          <button type="button" :class="{ active: activeEvidenceTab === 'tools' }" @click="activeEvidenceTab = 'tools'">Tool I/O</button>
+          <button type="button" :class="{ active: activeEvidenceTab === 'json' }" @click="activeEvidenceTab = 'json'">Raw JSON</button>
+          <button class="drawer-toggle" type="button" @click="evidenceExpanded = !evidenceExpanded">
+            {{ evidenceExpanded ? '收起' : '展开证据' }}
+          </button>
+        </div>
+      </header>
+      <CodeBlock v-if="evidenceExpanded" :title="evidenceTitle" :language="evidenceLanguage" :code="evidenceCode" />
     </section>
   </div>
 </template>
 
 <style scoped>
-.agent-trace-page {
-  --trace-bg: #050505;
-  --trace-panel: #090909;
-  --trace-panel-soft: #0d0d0d;
-  --trace-line: #222;
-  --trace-line-soft: rgba(255, 255, 255, 0.075);
-  --trace-ink: #999;
-  --trace-ink-soft: #6f6f6f;
-  --trace-strong: #fff;
-  --trace-blue: #60a5fa;
-  --trace-green: #4ade80;
-  --trace-amber: #fbbf24;
+.trace-redesign {
+  --trace-bg-page: #05080d;
+  --trace-panel-low: #0b1119;
+  --trace-panel-main: #101923;
+  --trace-panel-high: #142231;
+  --trace-line: rgba(129, 154, 171, 0.18);
+  --trace-line-strong: rgba(94, 234, 212, 0.24);
+  --trace-text: #eff7f6;
+  --trace-muted: #9fb1bf;
+  --trace-dim: #6f8291;
+  --trace-mint: #38e2ad;
+  --trace-blue: #6bb7ff;
+  --trace-amber: #f5b84c;
   --trace-red: #f87171;
   display: grid;
-  grid-template-columns: minmax(340px, 390px) minmax(0, 1fr);
-  gap: 0;
+  gap: 16px;
   min-width: 0;
-  min-height: calc(100dvh - 72px);
-  align-items: start;
-  border: 0.5px solid var(--trace-line);
-  background: var(--trace-bg);
-  color: var(--trace-ink);
+  color: var(--trace-text);
 }
 
-.agent-trace-page > *,
-.run-row > *,
-.trace-grid > *,
-.run-summary > * {
+.trace-hero {
   min-width: 0;
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, auto);
+  align-items: end;
+  gap: 24px;
+  padding: 22px 24px;
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(135deg, rgba(56, 226, 173, 0.12), rgba(78, 161, 255, 0.06) 52%, transparent),
+    var(--trace-panel-main);
+  box-shadow: inset 0 0 0 1px var(--trace-line), var(--shadow-card);
+}
+
+.trace-hero__copy {
+  min-width: 0;
+}
+
+.eyebrow,
+.panel-eyebrow {
+  display: block;
+  margin: 0;
+  color: var(--trace-mint);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.trace-hero h1,
+.trace-hero p,
+.panel-heading h2,
+.panel-heading p {
+  margin: 0;
+}
+
+.trace-hero h1 {
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 720;
+}
+
+.trace-hero p:not(.eyebrow) {
+  margin-top: 8px;
+  color: #c8d7df;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.workflow-chain {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(5, 8, 13, 0.62);
+  color: #d7e4e7;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.workflow-chain span {
+  color: var(--trace-mint);
+  margin: 0 6px;
+}
+
+.trace-hero__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trace-hero__status span {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  background: rgba(5, 8, 13, 0.58);
+  color: #c0ccd4;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.trace-hero__status i,
+.tone-dot,
+.step-rail i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--trace-mint);
+  flex: 0 0 auto;
+}
+
+.trace-stage {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.24fr) minmax(520px, 1fr) minmax(340px, 0.31fr);
+  gap: 18px;
+  min-width: 0;
+  align-items: stretch;
 }
 
 .trace-panel {
-  border: 0;
-  border-radius: 0;
-  background: var(--trace-bg);
-  box-shadow: none;
+  min-width: 0;
+  min-height: 600px;
+  border-radius: var(--radius-card);
+  background: var(--trace-panel-low);
+  box-shadow: inset 0 0 0 1px var(--trace-line), var(--shadow-card);
+  overflow: hidden;
 }
 
-.run-directory {
-  min-height: calc(100dvh - 73px);
-  border-right: 0.5px solid var(--trace-line);
+.timeline-panel {
+  background: var(--trace-panel-main);
+  box-shadow: inset 0 0 0 1px var(--trace-line-strong), 0 18px 48px rgba(0, 0, 0, 0.24);
 }
 
-.trace-section-header {
-  min-height: 58px;
-  padding: 15px 16px;
-  border-bottom: 0.5px solid var(--trace-line);
-  background: var(--trace-bg);
-}
-
-.panel-title {
-  color: var(--trace-strong);
-  font-size: 13px;
-  font-weight: 620;
-  letter-spacing: 0;
-}
-
-.panel-subtitle {
-  max-width: 58ch;
-  color: var(--trace-ink-soft);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.refresh-action {
-  --el-button-bg-color: transparent;
-  --el-button-border-color: var(--trace-line);
-  --el-button-text-color: var(--trace-ink);
-  --el-button-hover-bg-color: rgba(255, 255, 255, 0.035);
-  --el-button-hover-border-color: #333;
-  --el-button-hover-text-color: var(--trace-strong);
-  border-radius: 999px;
-}
-
-.trace-filter-bar {
-  padding: 12px 14px;
-  border-bottom: 0.5px solid var(--trace-line);
-  background: #070707;
-}
-
-.trace-filter-bar :deep(.el-select__wrapper) {
-  min-height: 32px;
-  border-radius: 0 !important;
-  background: #050505 !important;
-  box-shadow: 0 0 0 0.5px var(--trace-line) inset !important;
-}
-
-.trace-filter-bar :deep(.el-select__placeholder),
-.trace-filter-bar :deep(.el-select__selected-item) {
-  color: var(--trace-ink);
-}
-
-.run-rows {
-  display: grid;
-}
-
-.trace-run-row {
-  width: 100%;
+.panel-heading {
   min-height: 72px;
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) 118px;
-  gap: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(129, 154, 171, 0.12);
+}
+
+.panel-heading h2 {
+  margin-top: 4px;
+  color: var(--trace-text);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.panel-heading p {
+  margin-top: 5px;
+  color: var(--trace-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.icon-button {
+  height: 32px;
+  display: inline-flex;
   align-items: center;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 0 10px;
   border: 0;
-  border-bottom: 0.5px solid var(--trace-line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d7e4e7;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.project-filter {
+  width: calc(100% - 36px);
+  margin: 0 18px 12px;
+}
+
+.run-list {
+  display: grid;
+  gap: 8px;
+  max-height: 510px;
+  padding: 0 12px 16px;
+  overflow: auto;
+}
+
+.run-item {
+  width: 100%;
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   color: inherit;
-  text-align: left;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
+  text-align: left;
 }
 
-.trace-run-row:hover,
-.trace-run-row.active {
-  background: rgba(255, 255, 255, 0.035);
+.run-item:hover,
+.run-item.active {
+  background: rgba(255, 255, 255, 0.055);
 }
 
-.trace-run-row.active {
-  box-shadow: inset 2px 0 var(--trace-blue);
+.run-item.active {
+  box-shadow: inset 3px 0 0 var(--trace-mint);
 }
 
-.trace-node,
-.spine-dot {
-  width: 8px;
-  height: 8px;
-  border: 0.5px solid #3a3a3a;
-  border-radius: 999px;
-  background: #111;
+.run-item strong,
+.run-item small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.status-light.success,
-.spine-dot.success {
-  border-color: rgba(74, 222, 128, 0.65);
-  background: var(--trace-green);
+.run-item strong {
+  color: var(--trace-text);
+  font-size: 13px;
+  line-height: 18px;
 }
 
-.status-light.failed,
-.spine-dot.failed {
-  border-color: rgba(248, 113, 113, 0.65);
+.run-item small {
+  margin-top: 6px;
+  color: var(--trace-dim);
+  font-size: 11px;
+}
+
+.tone-dot[data-tone="warning"],
+.step-rail i[data-tone="warning"] {
+  background: var(--trace-amber);
+}
+
+.tone-dot[data-tone="danger"],
+.step-rail i[data-tone="danger"] {
   background: var(--trace-red);
 }
 
-.status-light.running,
-.spine-dot.running {
-  border-color: rgba(96, 165, 250, 0.65);
+.tone-dot[data-tone="running"],
+.step-rail i[data-tone="running"] {
   background: var(--trace-blue);
-  animation: trace-breathe 1.6s ease-in-out infinite;
 }
 
-.status-light.idle,
-.spine-dot.idle {
-  border-color: rgba(96, 165, 250, 0.42);
-  background: rgba(96, 165, 250, 0.55);
+.timeline-heading {
+  align-items: center;
+  padding-bottom: 16px;
 }
 
-.run-main strong,
-.run-main small,
-.run-meta b,
-.run-meta small {
+.timeline-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 252px;
+  gap: 12px;
+  margin: 12px 18px 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(5, 8, 13, 0.52);
+}
+
+.timeline-context span,
+.timeline-context strong,
+.timeline-context small {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.run-main strong {
-  color: var(--trace-strong);
-  font-size: 12px;
-  font-weight: 560;
-}
-
-.run-main small,
-.run-meta small {
-  margin-top: 6px;
-  color: var(--trace-ink-soft);
-  font-size: 9px;
-}
-
-.run-meta {
-  display: grid;
-  justify-items: end;
-  text-align: right;
-}
-
-.trace-detail {
-  display: grid;
   min-width: 0;
-  background: var(--trace-bg);
-}
-
-.metrics-strip {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(560px, 0.95fr);
-  align-items: stretch;
-  border-bottom: 0.5px solid var(--trace-line);
-  background: var(--trace-bg);
-}
-
-.workflow-title {
-  padding: 16px 18px;
-  border-right: 0.5px solid var(--trace-line);
-}
-
-.workflow-title span,
-.workflow-title strong,
-.workflow-title small,
-.metric-cell span,
-.metric-cell strong {
-  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.workflow-title span,
-.metric-cell span {
-  color: var(--trace-ink-soft);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.workflow-title strong {
-  margin-top: 7px;
-  color: var(--trace-strong);
-  font-size: 17px;
-  font-weight: 620;
-  line-height: 1.25;
-}
-
-.workflow-title small {
-  margin-top: 7px;
-  color: var(--trace-ink);
-  font-size: 11px;
-  line-height: 1.45;
-  white-space: nowrap;
-}
-
-.metrics-bar {
-  display: grid;
-  grid-template-columns: minmax(150px, 1.35fr) repeat(3, minmax(0, 1fr));
-  background: var(--trace-bg);
-}
-
-.metric-cell {
-  display: grid;
-  align-content: center;
-  min-height: 74px;
-  padding: 12px 14px;
-  border-right: 0.5px solid var(--trace-line);
-}
-
-.metric-cell:last-child {
-  border-right: 0;
-}
-
-.metric-cell strong {
-  margin-top: 7px;
-  color: var(--trace-strong);
+.timeline-context span,
+.timeline-context small {
+  color: var(--trace-dim);
   font-size: 12px;
-  font-weight: 560;
+  line-height: 18px;
+}
+
+.timeline-context > div:first-child small {
+  display: -webkit-box;
+  max-height: 40px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.timeline-context strong {
+  margin-top: 4px;
+  color: var(--trace-text);
+  font-size: 15px;
+  line-height: 22px;
   white-space: nowrap;
 }
 
-.metric-cell .mono {
-  font-variant-numeric: tabular-nums;
-}
-
-.trace-grid {
+.context-metrics {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
-  gap: 0;
-  align-items: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: rgba(129, 154, 171, 0.12);
 }
 
-.trace-region {
-  border-right: 0.5px solid var(--trace-line);
+.context-metrics span {
+  padding: 8px 7px;
+  background: rgba(20, 34, 49, 0.74);
+  text-align: center;
 }
 
-.review-inspector {
-  border-right: 0;
+.context-metrics b {
+  display: block;
+  color: #dff9f3;
+  font-size: 15px;
 }
 
-.step-list,
-.review-list {
+.context-metrics small {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.timeline-list {
   display: grid;
+  gap: 8px;
+  padding: 0 18px 18px;
 }
 
-.trace-step-row {
+.timeline-step {
+  min-width: 0;
+  min-height: 56px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  border-bottom: 0.5px solid var(--trace-line);
+  grid-template-columns: 42px 18px minmax(0, 1fr) auto 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.034);
+  cursor: pointer;
 }
 
-.trace-step-row:last-child {
-  border-bottom: 0;
+.timeline-step.active {
+  background: rgba(56, 226, 173, 0.085);
 }
 
-.trace-spine {
+.step-number {
+  color: #eaf4f3;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.step-rail {
   position: relative;
+  height: 100%;
   display: grid;
-  place-items: start center;
-  padding-top: 21px;
+  place-items: center;
 }
 
-.trace-spine::after {
+.step-rail::after {
   content: "";
   position: absolute;
-  top: 31px;
+  top: 36px;
   bottom: -20px;
-  width: 0.5px;
-  background: var(--trace-line);
+  width: 1px;
+  background: rgba(129, 154, 171, 0.2);
 }
 
-.trace-step-row:last-child .trace-spine::after {
+.timeline-step:last-child .step-rail::after {
   display: none;
 }
 
-.spine-dot {
+.step-rail i {
   position: relative;
   z-index: 1;
 }
 
-.trace-cell {
-  padding: 16px 18px 16px 0;
+.step-copy {
+  min-width: 0;
 }
 
-.step-title {
+.step-copy h3,
+.step-copy p {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-copy h3 {
+  color: var(--trace-text);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.step-copy p {
+  margin-top: 2px;
+  color: var(--trace-muted);
+  font-size: 13px;
+  line-height: 19px;
+  white-space: nowrap;
+}
+
+.step-latency {
+  color: var(--trace-dim);
+  font-size: 12px;
+  text-align: right;
+}
+
+.decision-panel {
+  background: #0e151f;
+}
+
+.current-step-card {
+  margin: 16px 18px 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.current-step-card h3,
+.current-step-card p {
+  margin: 0;
+}
+
+.current-step-card h3 {
+  margin-top: 6px;
+  color: var(--trace-text);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.current-step-card p {
+  margin-top: 6px;
+  color: var(--trace-muted);
+  font-size: 13px;
+  line-height: 20px;
+  display: -webkit-box;
+  max-height: 40px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.decision-grid {
+  display: grid;
+  gap: 8px;
+  margin: 0 18px;
+}
+
+.decision-grid div {
+  min-width: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(129, 154, 171, 0.12);
+}
+
+.decision-grid dt,
+.decision-grid dd {
+  min-width: 0;
+}
+
+.decision-grid dt {
+  color: var(--trace-dim);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.decision-grid dd {
+  margin: 4px 0 0;
+  color: var(--trace-text);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.decision-grid div:nth-child(4) dd,
+.decision-grid div:nth-child(6) dd {
+  display: -webkit-box;
+  max-height: 58px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.risk-pill {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 184, 76, 0.14);
+  color: var(--trace-amber);
+  font-size: 12px;
+}
+
+.risk-pill[data-tone="success"] {
+  background: rgba(56, 226, 173, 0.12);
+  color: var(--trace-mint);
+}
+
+.risk-pill[data-tone="danger"] {
+  background: rgba(248, 113, 113, 0.14);
+  color: var(--trace-red);
+}
+
+.decision-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 18px 14px;
+}
+
+.decision-button {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: #05100d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.decision-button.approve {
+  background: var(--trace-mint);
+}
+
+.decision-button.request {
+  background: rgba(245, 184, 76, 0.9);
+}
+
+.decision-button.reject {
+  background: rgba(248, 113, 113, 0.9);
+}
+
+.decision-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.evidence-drawer {
+  min-width: 0;
+  border-radius: var(--radius-card);
+  background: rgba(11, 17, 25, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(129, 154, 171, 0.13);
+  overflow: hidden;
+}
+
+.evidence-header {
+  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
+  padding: 10px 14px;
 }
 
-.step-title strong {
-  overflow: hidden;
-  color: var(--trace-strong);
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.evidence-header h2 {
+  margin: 2px 0 0;
+  color: var(--trace-text);
+  font-size: 15px;
+  line-height: 20px;
 }
 
-.step-body p {
-  margin: 8px 0 0;
-  color: var(--trace-ink);
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.step-body > small {
-  display: block;
-  margin-top: 8px;
-  color: var(--trace-ink-soft);
-  font-size: 9px;
-}
-
-.tool-ledger {
-  display: grid;
-  margin-top: 12px;
-  border-top: 0.5px solid var(--trace-line);
-}
-
-.tool-entry {
-  min-width: 0;
-  padding: 10px 0 10px 12px;
-  border-bottom: 0.5px solid var(--trace-line);
-  border-left: 0.5px solid var(--trace-line);
-  background: transparent;
-}
-
-.tool-entry:last-child {
-  border-bottom: 0;
-}
-
-.tool-entry strong,
-.tool-entry span,
-.tool-entry small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tool-entry strong {
-  color: var(--trace-blue);
-  font-size: 10px;
-  font-weight: 560;
-  letter-spacing: 0.02em;
-}
-
-.tool-entry span,
-.tool-entry small {
-  margin-top: 5px;
-  color: var(--trace-ink);
-  font-size: 10px;
-}
-
-.tool-entry small {
-  color: var(--trace-ink-soft);
-}
-
-.review-row {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  gap: 10px;
-  padding: 14px;
-  border-bottom: 0.5px solid var(--trace-line);
-}
-
-.review-row:last-child {
-  border-bottom: 0;
-}
-
-.review-list p,
-.review-list small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.review-list p {
-  margin: 8px 0 0;
-  color: var(--trace-ink);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.review-list small {
-  margin-top: 8px;
-  color: var(--trace-ink-soft);
-  font-size: 9px;
-  white-space: nowrap;
-}
-
-.status-badge {
-  display: inline-flex !important;
-  max-width: 100%;
-  height: 22px;
-  align-items: center;
+.evidence-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
-  padding: 0 8px;
-  border: 0.5px solid rgba(96, 165, 250, 0.24);
-  border-radius: 999px;
-  background: rgba(96, 165, 250, 0.1);
-  color: var(--trace-blue);
-  font-size: 10px;
-  font-weight: 560;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.status-badge::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
-  animation: trace-breathe 1.6s ease-in-out infinite;
-  flex: 0 0 auto;
+.evidence-controls button {
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--trace-muted);
+  cursor: pointer;
+  font-size: 12px;
 }
 
-.status-badge.success {
-  border-color: rgba(74, 222, 128, 0.24);
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--trace-green);
+.evidence-controls button.active {
+  background: rgba(78, 161, 255, 0.16);
+  color: #d8ecff;
 }
 
-.status-badge.failed {
-  border-color: rgba(248, 113, 113, 0.26);
-  background: rgba(248, 113, 113, 0.1);
-  color: var(--trace-red);
+.evidence-controls .drawer-toggle {
+  background: rgba(56, 226, 173, 0.12);
+  color: #dff9f3;
 }
 
-.status-badge.running {
-  border-color: rgba(251, 191, 36, 0.26);
-  background: rgba(251, 191, 36, 0.1);
-  color: var(--trace-amber);
+.evidence-drawer.expanded :deep(.code-block) {
+  border: 0;
+  border-top: 1px solid rgba(129, 154, 171, 0.13);
+  border-radius: 0;
 }
 
-.agent-trace-page :deep(.status-tag) {
-  height: 22px;
-  padding: 0 8px;
-  border: 0.5px solid rgba(96, 165, 250, 0.24);
-  border-radius: 999px;
-  background: rgba(96, 165, 250, 0.1);
-  color: var(--trace-blue);
-  font-size: 10px;
-  font-weight: 560;
+.evidence-drawer.expanded :deep(.code-block pre) {
+  max-height: 230px;
 }
 
-.agent-trace-page :deep(.status-tag::before) {
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
-  animation: trace-breathe 1.6s ease-in-out infinite;
-}
-
-.agent-trace-page :deep(.status-tag.saved),
-.agent-trace-page :deep(.status-tag.confirmed),
-.agent-trace-page :deep(.status-tag.success) {
-  border-color: rgba(74, 222, 128, 0.24);
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--trace-green);
-}
-
-.agent-trace-page :deep(.status-tag.failed),
-.agent-trace-page :deep(.status-tag.rejected) {
-  border-color: rgba(248, 113, 113, 0.26);
-  background: rgba(248, 113, 113, 0.1);
-  color: var(--trace-red);
-}
-
-.agent-trace-page :deep(.status-tag.generating),
-.agent-trace-page :deep(.status-tag.pending),
-.agent-trace-page :deep(.status-tag.running),
-.agent-trace-page :deep(.status-tag.waiting) {
-  border-color: rgba(251, 191, 36, 0.26);
-  background: rgba(251, 191, 36, 0.1);
-  color: var(--trace-amber);
-}
-
-.empty-state,
-.empty-detail {
-  min-height: 96px;
+.empty-state {
+  min-height: 90px;
   display: grid;
   place-items: center;
-  border: 0;
-  border-top: 0.5px solid var(--trace-line);
-  border-bottom: 0.5px solid var(--trace-line);
-  border-radius: 0;
-  background: transparent;
-  color: var(--trace-ink-soft);
+  padding: 14px;
+  color: var(--trace-dim);
+  font-size: 13px;
   text-align: center;
-  font-size: 12px;
 }
 
-.empty-detail {
-  min-height: 260px;
+.trace-redesign > *,
+.trace-hero > *,
+.trace-stage > *,
+.panel-heading > *,
+.run-item > *,
+.timeline-context > *,
+.context-metrics > *,
+.timeline-step > *,
+.decision-grid > *,
+.evidence-header > *,
+.evidence-controls > * {
+  min-width: 0;
 }
 
-.agent-trace-page :deep(.el-loading-mask) {
-  background-color: rgba(5, 5, 5, 0.82);
-}
-
-@keyframes trace-breathe {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.46;
-    transform: scale(0.72);
-  }
-}
-
-@media (max-width: 1120px) {
-  .agent-trace-page,
-  .trace-grid,
-  .metrics-strip {
-    grid-template-columns: 1fr;
+@media (max-width: 1280px) {
+  .trace-stage {
+    grid-template-columns: minmax(260px, 0.36fr) minmax(0, 1fr);
   }
 
-  .run-directory,
-  .workflow-title,
-  .trace-region {
-    border-right: 0;
-  }
-
-  .metrics-bar {
-    border-top: 0.5px solid var(--trace-line);
+  .decision-panel {
+    grid-column: 1 / -1;
+    min-height: 0;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .status-light.running,
-  .spine-dot.running,
-  .status-badge::before,
-  .agent-trace-page :deep(.status-tag::before) {
-    animation: none;
+@media (max-width: 920px) {
+  .trace-hero,
+  .trace-stage,
+  .timeline-context,
+  .context-metrics,
+  .timeline-step {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-hero__status,
+  .evidence-controls {
+    justify-content: flex-start;
+  }
+
+  .trace-panel {
+    min-height: auto;
+  }
+
+  .step-rail {
+    display: none;
   }
 }
 </style>

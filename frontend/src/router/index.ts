@@ -18,6 +18,7 @@ const PromptTemplatesView = () => import('@/views/PromptTemplatesView.vue')
 const GenerationHistoryView = () => import('@/views/GenerationHistoryView.vue')
 const AgentRunTraceView = () => import('@/views/AgentRunTraceView.vue')
 const KnowledgeBaseView = () => import('@/views/KnowledgeBaseView.vue')
+const HumanReviewView = () => import('@/views/HumanReviewView.vue')
 
 export interface NavItem {
   path?: string
@@ -34,67 +35,66 @@ export const navItems: NavItem[] = [
   {
     path: '/',
     name: 'Dashboard',
-    label: '仪表盘',
+    label: 'Dashboard',
     group: '工作流',
     icon: DataBoard,
   },
   {
     path: '/workbench',
     name: 'Workbench',
-    label: '工作台',
+    label: 'Workbench',
     group: '工作流',
     icon: Cpu,
   },
   {
     path: '/prompts',
     name: 'PromptTemplates',
-    label: '提示词工作室',
+    label: 'Prompt Templates',
     group: '工作流',
     icon: ChatLineSquare,
   },
   {
-    path: '/logs',
-    name: 'LogAnalyzer',
-    label: '日志分析',
-    group: '可观测性',
-    icon: Document,
-  },
-  {
     path: '/agent-runs',
     name: 'AgentRunTrace',
-    label: '智能体运行追踪',
+    label: 'Trace Evidence',
     group: '可观测性',
     icon: DataLine,
   },
   {
     path: '/history',
     name: 'GenerationHistory',
-    label: '生成追踪',
+    label: 'Generation History',
     group: '可观测性',
     icon: Clock,
   },
   {
+    path: '/logs',
+    name: 'LogAnalyzer',
+    label: 'Log Analyzer',
+    group: '可观测性',
+    icon: Document,
+  },
+  {
     name: 'ToolCalls',
-    label: '工具调用',
+    label: 'Tool Calls',
     group: '可观测性',
     icon: Cpu,
     disabled: true,
-    hint: '当前在智能体运行追踪中查看 Tool Call',
+    hint: '当前在 Trace Evidence 页面查看 Tool Call 明细',
   },
   {
     path: '/knowledge',
     name: 'KnowledgeBase',
-    label: '知识库',
+    label: 'Knowledge Base',
     group: '知识与引用',
     icon: Connection,
   },
   {
+    path: '/reviews',
     name: 'HumanReview',
-    label: '人工审核',
+    label: 'Human Review',
     group: '治理与审核',
     icon: DataLine,
-    disabled: true,
-    hint: '当前在生成追踪和智能体运行追踪中查看 Human Review',
   },
   {
     name: 'Provider',
@@ -102,15 +102,15 @@ export const navItems: NavItem[] = [
     group: '配置',
     icon: Connection,
     disabled: true,
-    hint: 'Provider 通过后端环境变量配置',
+    hint: '配置预留 / 当前通过环境变量配置',
   },
   {
     name: 'Settings',
-    label: '设置',
+    label: 'Settings',
     group: '配置',
     icon: Files,
     disabled: true,
-    hint: '配置页待接入',
+    hint: '配置预留 / 当前通过环境变量配置',
   },
   {
     path: '/docs',
@@ -130,6 +130,7 @@ const router = createRouter({
     { path: '/logs', name: 'LogAnalyzer', component: LogAnalyzerView },
     { path: '/agent-runs', name: 'AgentRunTrace', component: AgentRunTraceView },
     { path: '/knowledge', name: 'KnowledgeBase', component: KnowledgeBaseView },
+    { path: '/reviews', name: 'HumanReview', component: HumanReviewView },
     { path: '/prompts', name: 'PromptTemplates', component: PromptTemplatesView },
     { path: '/history', name: 'GenerationHistory', component: GenerationHistoryView },
     { path: '/docs', redirect: '/' },
