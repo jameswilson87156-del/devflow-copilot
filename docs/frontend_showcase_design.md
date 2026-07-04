@@ -4,6 +4,13 @@
 
 本文件是 DevFlow Copilot 正式前端设计方向门禁，不包含代码实现，不要求立即改 Vue 页面或样式。用户确认前不得进入前端代码改造。
 
+本次更新依据：
+
+- `docs/frontend_reference_screenshot_index.md`
+- `.local/reference_screenshots/top_candidates.md`
+- `docs/frontend_moodboard.md`
+- 用户人工筛选后的第一梯队 / 第二梯队参考结论
+
 ## 1. 视觉定位
 
 DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：深色、克制、数据密集、偏开发者工具，而不是普通后台管理系统、AI 聊天页或营销落地页。
@@ -15,19 +22,83 @@ DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：�
 - 所有数据都可追溯到本地 demo、接口、测试或指标脚本。
 - 页面视觉要好看，但好看来自信息层级、状态清晰和截图可信，不来自装饰图。
 
+### 1.1 中文企业级视觉方向
+
+页面主体必须中文为主，技术词保留英文。整体表达应更接近中文企业级中后台 + AI Observability 控制台，而不是海外 SaaS 营销页。
+
+中文主标签示例：
+
+- 今日运行
+- 成功率
+- 平均耗时
+- 待人工复核
+- 工具调用
+- 最近运行
+- 执行证据
+- 生成结果预览
+- 知识引用
+- 复核队列
+
+保留英文技术词：
+
+- Prompt
+- Provider
+- Trace
+- Tool Call
+- Human Review
+- local-rule fallback
+- OpenAI-compatible
+- Token
+- JSON
+
+文案原则：
+
+- 指标、状态、复核动作、数据来源优先中文。
+- 技术对象、链路节点、Provider 类型保留英文。
+- 不使用“智能赋能”“无限可能”“一站式提升效率”等营销表达。
+- Demo 数据必须显式标注，例如 `Demo Data`、`来源：本地指标快照`。
+
 ## 2. 参考来源
 
-主要参考来源来自 `docs/frontend_reference_research.md` 和 `docs/frontend_moodboard.md`：
+主要参考来源来自 `docs/frontend_reference_screenshot_index.md`、`.local/reference_screenshots/top_candidates.md`、`docs/frontend_reference_research.md` 和 `docs/frontend_moodboard.md`。
 
-- Dashboard：Langfuse、PostHog、Mobbin Admin Dashboard。
-- Workbench：OpenHands、Raycast、Linear。
-- Trace / Timeline：LangSmith、Langfuse、AgentOps、Arize Phoenix。
-- Human Review：Linear、LangSmith feedback queue。
-- Knowledge Base：Dify、Open WebUI。
-- Prompt Templates：Promptfoo、Helicone、Vercel AI SDK。
-- README 展示：OpenHands、Flowise、Promptfoo、Landingfolio。
+### 2.1 人工筛选后的参考层级
+
+第一梯队主参考：
+
+- `01_ant_design_pro_analysis.png`：Dashboard 的中文企业级指标密度、筛选区、指标卡和图表节奏。
+- `09_langfuse_home_or_github.png`：Trace Evidence / Dashboard 的 LLM Observability 氛围。
+- `10_langsmith_observability.png`：Trace Evidence / Human Review 的 Trace + feedback 结构。
+- `13_agentops_github.png`：Trace Evidence / Human Review 的 session drilldown、event breakdown、inspector 思路。
+- `14_dify_github.png`：Knowledge Base / Workbench / Prompt Templates 的 AI 平台模块分区。
+- `16_promptfoo_github.png`：Prompt Templates / README metrics 的 PromptOps 和证据展示。
+
+第二梯队辅助参考：
+
+- `08_aliyun_sls_dashboard.png`：Log Analyzer / Dashboard 的中文运维监控思路。
+- `06_google_cloud_monitoring_dashboards.png`：Dashboard / Observability 的监控命名和结构。
+- `02_ant_design_pro_monitor.png`：Dashboard / Trace 的监控卡片组织。
+- `15_openwebui_github.png`：Knowledge / Provider / Tool grouping 的模块分类。
+
+不作为主视觉参考：
+
+- Arco / Semi 首页只作为设计系统和组件质感参考，不作为页面布局参考。
+- Google Cloud / 华为云文档页只作为控制台叙事和术语参考，不作为主视觉参考。
+- Helicone / Phoenix GitHub 页面只作为能力边界参考，不作为主视觉参考。
 
 只借鉴结构，不复制源代码、Logo、商标、截图、图片素材、完整页面布局或受版权保护的插图。
+
+### 2.2 页面级参考绑定
+
+| 页面 | 主参考 | 辅助参考 | 目标 |
+| --- | --- | --- | --- |
+| Dashboard | `01_ant_design_pro_analysis.png` + `09_langfuse_home_or_github.png` | `08_aliyun_sls_dashboard.png` / `06_google_cloud_monitoring_dashboards.png` / `02_ant_design_pro_monitor.png` | 中文企业级指标看板 + AI Workflow 证据总览，不做普通后台 |
+| Workbench | `14_dify_github.png` + DevFlow 原创 visual target concept | DevFlow 现有 Workbench 真实接口和状态机 | 需求输入、Prompt 模板、Provider 状态、生成 Artifact、变更摘要、知识引用、Trace 摘要、人工确认 |
+| Trace Evidence | `09_langfuse_home_or_github.png` + `10_langsmith_observability.png` + `13_agentops_github.png` | `06_google_cloud_monitoring_dashboards.png` / `02_ant_design_pro_monitor.png` | Run list + Timeline + Step Inspector + Raw JSON / Rendered Prompt / Fallback Reason |
+| Human Review | `10_langsmith_observability.png` + `13_agentops_github.png` | DevFlow 原创审核状态机 | 复核队列、风险标签、Artifact 预览、决策面板、复核原因、状态历史 |
+| Knowledge Base | `14_dify_github.png` + `15_openwebui_github.png` | DevFlow 当前 Document / Chunk / Reference 数据结构 | Document -> Chunk -> Search -> Citation -> Generation Reference |
+| Prompt Templates | `16_promptfoo_github.png` + `14_dify_github.png` | Vercel AI SDK / Promptfoo 的工程证据表达 | Template -> Variables -> Render Preview -> Test Run -> Trace metadata |
+| README 展示 | `16_promptfoo_github.png` + OpenHands / Flowise README 展示方式 | 本地 `docs/images/` 真实截图和 `metrics_snapshot` | 真实截图、Quickstart、metrics snapshot、边界说明 |
 
 ## 3. 色彩系统
 
@@ -100,6 +171,34 @@ DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：�
 - 1280px 以下收起侧边栏，右侧 inspector 改为抽屉。
 - 不出现横向页面溢出；代码块内部可横向滚动。
 
+### 6.1 Implementation Visual Spec
+
+| 项目 | 规格 |
+| --- | --- |
+| Screenshot viewport | `1440x900` 或 `1440x1000` |
+| Sidebar 宽度 | `220px` |
+| Topbar 高度 | `52px` |
+| Page padding | `24px` |
+| Panel padding | `16px` |
+| Grid gap | `16px` |
+| Card radius | `6px`，最大不超过 `8px` |
+| Table row height | `40-44px` |
+| Inspector 宽度 | `320-360px` |
+| Workbench split | `28% / 46% / 26%` |
+| Trace split | `24% / 42% / 34%` |
+| Code block | 使用等宽字体 |
+| Technical metadata | `traceId`、`provider`、`latency`、`token`、`model` 使用等宽字体 |
+| Badge | 小圆点 + 文案，不只靠颜色 |
+| Demo label | 固定使用 `Demo Data / 来源：本地指标快照` 等标签 |
+| Disabled page | 标注 `配置预留 / 当前通过环境变量配置` |
+
+落地要求：
+
+- 所有指标区必须能说明数据来源。
+- 所有 demo / derived / UI-only 数据必须显式标注。
+- inspector 面板优先承载证据详情，不做装饰性侧栏。
+- 表格与列表应保持稳定行高，避免截图时文字拥挤或错位。
+
 ## 7. 导航结构
 
 第一阶段建议导航：
@@ -127,12 +226,24 @@ DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：�
 ### Dashboard
 
 ```text
-[Header: DevFlow Copilot / today scope / metrics source]
-[Metric strip: Runs | Success | Avg latency | Reviews | Tool Calls]
-[Main: Recent Runs table + Trace status]
-[Right: Review Queue + Provider Health]
-[Bottom: Metrics Snapshot + Recent Evidence]
+[Product Evidence Hero: DevFlow Copilot / AI Coding 工作台 / Agentic Workflow 控制台]
+[Mode strip: 本地 Demo 模式 / local-rule fallback / OpenAI-compatible 可选 / 来源：metrics_snapshot]
+[Workflow chain: Prompt -> Provider -> Trace -> Tool Call -> Human Review]
+[Metric strip: 今日运行 | 成功率 | 平均耗时 | 待人工复核 | 工具调用]
+[Main: 最近运行 table + Trace 状态]
+[Right: 复核队列 + Provider Health]
+[Bottom: Metrics Snapshot + 执行证据]
 ```
+
+Dashboard 顶部需要 Product Evidence Hero，不做营销 Hero。内容必须包含：
+
+- DevFlow Copilot
+- AI Coding 工作台 / Agentic Workflow 控制台
+- 本地 Demo 模式
+- local-rule fallback
+- OpenAI-compatible 可选
+- 数据来源：本地 metrics_snapshot
+- Prompt -> Provider -> Trace -> Tool Call -> Human Review 链路
 
 ### Workbench
 
@@ -151,6 +262,25 @@ DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：�
 [Right: selected step inspector: Prompt, Provider, Tool Call, Error, Review]
 [Bottom: raw JSON / rendered prompt / fallback detail]
 ```
+
+Trace Evidence 是核心展示页，必须比普通历史详情更强。Timeline 步骤中文化为：
+
+1. Prompt 渲染
+2. 知识命中
+3. Provider 选择
+4. Tool Call 模拟
+5. 生成记录
+6. 需要人工复核
+7. 已确认 / 已驳回
+
+Step Inspector 必须支持：
+
+- Raw JSON
+- Rendered Prompt
+- Provider / Model / Token / Latency
+- Tool Call 输入输出摘要
+- local-rule fallback reason
+- Human Review 状态与复核原因
 
 ### Human Review
 
@@ -183,12 +313,12 @@ DevFlow Copilot 应呈现为 AI Coding Workbench / Agentic Workflow Console：�
 
 | 页面 | 信息模块 |
 | --- | --- |
-| Dashboard | Today Runs、Success Rate、Avg Latency、Human Reviews、Tool Calls、Recent Runs、Review Queue、Metrics Snapshot |
-| Workbench | Prompt 输入、Project Context、Provider 状态、Knowledge Query、AI 输出、Run、Save、Confirm、Trace Summary |
-| Trace Evidence | Prompt Render、Provider Call、Tool Call、Result、Token Usage、Error/Fallback、Timeline、Human Review |
-| Human Review | 待审核结果、风险提示、人工修改、审核状态、通过、驳回、重新生成、状态历史 |
-| Knowledge Base | 文档列表、Chunk、关键词检索、引用预览、生成引用历史、embedding 预留状态 |
-| Prompt Templates | 模板列表、模板版本、适用场景、变量、渲染预览、测试运行、使用次数 derived/demo 标识 |
+| Dashboard | 今日运行、成功率、平均耗时、待人工复核、工具调用、最近运行、复核队列、Metrics Snapshot、执行证据 |
+| Workbench | Prompt 输入、Project Context、Provider 状态、Knowledge Query、生成结果预览、Run、Save、Confirm、Trace Summary |
+| Trace Evidence | Prompt 渲染、Provider Call、Tool Call、Result、Token Usage、Error/Fallback、Timeline、Human Review |
+| Human Review | 待审核结果、风险标签、人工修改、审核状态、通过、驳回、重新生成、状态历史、复核原因 |
+| Knowledge Base | 文档列表、Chunk、关键词检索、知识引用、引用预览、生成引用历史、embedding 预留状态 |
+| Prompt Templates | 模板列表、模板版本、适用场景、变量、渲染预览、测试运行、Trace metadata、使用次数 derived/demo 标识 |
 
 ## 10. 每个页面的截图重点
 
@@ -219,11 +349,11 @@ README 不应使用 `docs/design/references/` 或设计站点图片，只使用�
 
 借鉴：
 
-- Langfuse / LangSmith：Trace、observability、feedback 信息架构。
-- OpenHands / Linear / Raycast：开发者控制台、命令式操作、低噪审核队列。
+- Ant Design Pro Analysis：中文企业级 Dashboard 的指标密度、筛选区、指标卡和图表节奏。
+- Langfuse / LangSmith / AgentOps：Trace、observability、feedback、session drilldown、Step Inspector 信息架构。
 - Dify / Open WebUI：Knowledge / Tool / Model / Prompt 分组。
-- Promptfoo / Vercel AI SDK：Prompt 测试、Provider/Tool 说明、README 命令证据。
-- PostHog / Mobbin：指标 dashboard 和真实 SaaS 密度。
+- Promptfoo / Vercel AI SDK：Prompt 测试、Provider / Tool 说明、README 命令证据。
+- Alibaba Cloud SLS / Google Cloud Monitoring：中文运维监控思路、observability 命名和结构。
 
 原创：
 
@@ -242,6 +372,9 @@ README 不应使用 `docs/design/references/` 或设计站点图片，只使用�
 - 不把 demo seed / mock / UI-only 字段写成真实生产数据。
 - 不把 Keyword Knowledge Base 写成向量数据库。
 - 不把 Agent Run Trace 写成完整多 Agent Runtime。
+- 不把参考截图放进 `docs/images` 或 README。
+- 不把未实现的 Eval、RBAC、多 Agent Runtime、向量数据库写成已实现。
+- 不复制第三方页面布局、产品承诺或截图视觉细节。
 
 ## 14. 用户确认清单
 
