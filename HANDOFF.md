@@ -2,6 +2,22 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-04 - Codex - 作品集化只读审查、公开参考调研与指标采集地基
+
+- 做了什么：按附件要求先做作品集化第一阶段，不直接改正式 UI 页面、不改后端业务逻辑、不新增生产依赖、不接真实 API Key。开始前已读取 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`docs/ARCHITECTURE.md`、附件请求；`docs/PRD.md` 和 `docs/DESIGN.md` 当前不存在，实际参考了根目录 `DESIGN.md`、`docs/frontend-design.md`、README、API 文档、路由、Controller、截图脚本、测试和 migration。
+- 分支：从 `main` 创建并切换到 `feat/portfolio-showcase-v1`，开始修改前工作区无未提交 diff。
+- 新增审查文档：`docs/portfolio_audit.md`，记录当前项目状态、已有优势、主要问题、展示风险、README 不一致点、前后端问题、可写入简历的数据、暂时不能写的数据和第一阶段建议优化方向。审查中特别记录 `docs/api.md` 的截图 demo backend `18090` 与截图脚本默认 `18081` 不一致。
+- 新增参考调研：`docs/reference_research.md`，实际联网调研 OpenHands、Langfuse、Arize Phoenix、Dify、Flowise、Promptfoo、AgentOps。只记录可借鉴的信息架构、README 展示、Trace / Prompt / Review / Knowledge / Metrics 组织方式，明确不复制代码、样式、图片、Logo、商标或文案。
+- 新增参考图索引：`docs/design_refs/README.md`。本目录当前无图片；项目已有参考图位于 `docs/design/references/`，且是 AI-generated concept images，只能作为布局/信息层级参考，不是 README 真实截图，也不是公开项目调研来源。
+- 新增指标方案：`docs/metrics_plan.md`，按功能规模、工程质量、性能体验、AI 工作流效果 4 类定义指标，每项写明采集方式、命令、结果保存、是否可写简历、推荐表述和不能写的情况。
+- 新增采集脚本：`scripts/collect-portfolio-metrics.js`，静态采集页面、路由、Controller endpoint、测试数量、migration、seed、截图、README 图片和基础敏感信息模式；传入 `--run-checks` 时执行 `npm run build` 和 `mvn test`，并统计 `frontend/dist/assets` bundle 文件。
+- 新增指标快照：`docs/metrics/metrics_snapshot.md`，本轮采集到前端页面文件 7 个、真实 component route 7 个、redirect route 1 个、disabled nav item 4 个、后端 Controller 10 个、endpoint mapping 30 个、后端测试源码 `@Test` 20 个、Flyway migration 4 个、Prompt 模板 seed 6 条、Generation Record seed 6 条、Knowledge Document seed 2 条、Knowledge Chunk seed 4 条、`docs/images` PNG 11 张、README 图片引用 6 张。后端默认 `http://127.0.0.1:8080/api/dashboard/stats` 返回 HTTP 404，本轮未把接口耗时写成已采集。
+- 新增改造计划：`docs/showcase_upgrade_plan.md`，定义后续 Dashboard、Workbench、Prompt Templates、Trace Evidence、Human Review 的作品集化信息架构、状态覆盖、视觉方向、组件需求、README 升级计划和分阶段实施建议。
+- 编码处理：本轮新增中文文档按附件要求转为 UTF-8 with BOM；已抽查 `docs/portfolio_audit.md`、`docs/reference_research.md`、`docs/metrics/metrics_snapshot.md` 前三字节为 `239 187 191`。
+- 验证证据：`node scripts/collect-portfolio-metrics.js --run-checks` 成功，内部执行 `npm run build` 通过、`mvn test` 通过；`backend/target/surefire-reports/*.txt` 显示 5 个测试类合计 `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。前端 build 产物已生成，最大 chunk 仍主要来自 `vendor-markdown` 和 `vendor-element-plus`，这是既有 bundle 体积优化项。
+- 边界保持：未提交真实 API Key；未把 `local-rule` 写成真实 LLM 推理；未把 Knowledge Base 写成向量数据库；未把 Agent Run Trace 写成完整多 Agent Runtime；未运行 Docker；未把 demo seed / UI-only / mock 写成生产数据。
+- 下一步：建议先升级 README 作品集指标小节，引用 `docs/metrics/metrics_snapshot.md`，并补充 dev / Docker / screenshot / production demo 端口用途表；之后再单独处理 Human Review / Trace Evidence 展示补强。
+
 ## 2026-06-26 - Codex - Production Demo Readiness / 部署前安全收口
 
 - 做了什么：只做部署前安全收口，不继续改 UI 页面、不改后端核心业务逻辑、不新增接口或复杂功能。先审查 `README.md`、`docs/deployment-plan.md`、`docs/real-provider-verification.md`、`docs/design/references/README.md`、`docker-compose.yml`、后端配置、Vite 配置、`.gitignore`、截图脚本和当前 git status。

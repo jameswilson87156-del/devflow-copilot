@@ -1,4 +1,4 @@
-# DevFlow Copilot — 项目 TODO
+﻿# DevFlow Copilot — 项目 TODO
 
 > 阅读规则（AGENTS.md 要求）：每轮开始前先读本文件，了解当前已完成情况和待处理任务，再读 HANDOFF.md 了解最近一轮审查或修复记录。
 
@@ -469,6 +469,39 @@
   - 后续可选优化：做前端 bundle split / manual chunks，进一步降低大 chunk 警告。
 - 建议 commit message：`docs: add production demo deployment guide`
 
+## P1-15：作品集化只读审查、公开参考调研与指标采集地基 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户要求把项目进一步整理为适合简历、Boss 直聘、GitHub README 和面试展示的 AI 全栈开发作品；本轮先做只读审查、公开参考调研、参考图索引、指标方案和采集脚本，不直接进入正式 UI 大改。
+- 涉及文件：`docs/portfolio_audit.md`、`docs/reference_research.md`、`docs/design_refs/README.md`、`docs/metrics_plan.md`、`docs/metrics/metrics_snapshot.md`、`docs/showcase_upgrade_plan.md`、`scripts/collect-portfolio-metrics.js`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - 新增 `docs/portfolio_audit.md`，记录当前项目状态、已有优势、主要问题、展示风险、README 不一致点、前后端问题、可写和不可写简历数据。
+  - 新增 `docs/reference_research.md`，实际联网调研 OpenHands、Langfuse、Arize Phoenix、Dify、Flowise、Promptfoo、AgentOps 等公开项目，只借鉴信息架构和指标思路，不复制代码、截图、Logo、样式或文案。
+  - 新增 `docs/design_refs/README.md`，建立参考图索引；说明当前本目录无图片，已有参考图位于 `docs/design/references/`，且是 AI-generated concept images，不是运行截图。
+  - 新增 `docs/metrics_plan.md`，把指标分为功能规模、工程质量、性能体验、AI 工作流效果 4 类，并说明采集命令、结果保存位置、简历可写边界和不能写的情况。
+  - 新增 `scripts/collect-portfolio-metrics.js`，可静态采集页面、路由、接口、测试、migration、seed、截图、README 图片和基础敏感信息模式；传入 `--run-checks` 时执行 `npm run build` 和 `mvn test` 并统计 bundle。
+  - 生成 `docs/metrics/metrics_snapshot.md`，记录本地采集快照。
+  - 新增 `docs/showcase_upgrade_plan.md`，给出后续 README、Human Review / Trace Evidence 和指标化展示的分阶段计划；本轮未改正式页面。
+- 当前已采集指标：
+  - 前端页面文件：7 个。
+  - 前端真实 component route：7 个，redirect route：1 个，disabled nav item：4 个。
+  - 后端 Controller：10 个，endpoint mapping：30 个。
+  - 后端测试源码中的 `@Test`：20 个。
+  - Flyway migration：4 个，Prompt 模板 seed：6 条，Generation Record seed：6 条，Knowledge Document seed：2 条，Knowledge Chunk seed：4 条。
+  - `docs/images` PNG 截图：11 张，README 图片引用：6 张。
+- 保留边界：
+  - 未接真实 API Key，未写入任何真实密钥。
+  - 未把 `local-rule` 包装成真实 LLM 推理。
+  - 未把 Knowledge Base 写成向量数据库。
+  - 未把 Agent Run Trace 写成完整多 Agent Runtime。
+  - 未修改后端业务逻辑、前端正式页面、数据库 schema 或生产依赖。
+- 验证结果：
+  - `node scripts/collect-portfolio-metrics.js --run-checks` 成功生成 `docs/metrics/metrics_snapshot.md`。
+  - `cd frontend && npm run build` 由指标脚本执行通过；仍有既有 VueUse PURE 注释提示。
+  - `cd backend && mvn test` 由指标脚本执行通过，20 tests passed。
+  - 后端默认 `http://127.0.0.1:8080/api/dashboard/stats` 未作为本轮服务启动验收采集成功，指标快照标记为“当前未采集 / 默认接口不可用（HTTP 404）”。
+- 建议 commit message：`docs: add portfolio audit and metrics plan`
+
 ## 下一轮建议
 
-建议下一步将 `feat/frontend-design-system-foundation` 合并到 `main`，或创建 PR 后合并。合并前继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。
+建议下一步先升级 README 的作品集指标小节，引用 `docs/metrics/metrics_snapshot.md`，并补充 dev / Docker / screenshot / production demo 的端口用途表。继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。
