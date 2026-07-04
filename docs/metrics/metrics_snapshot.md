@@ -1,6 +1,6 @@
 ﻿# DevFlow Copilot 作品集指标快照
 
-采集时间：2026-07-04T08:24:37.805Z
+采集时间：2026-07-04T08:44:49.731Z
 采集命令：`node scripts/collect-portfolio-metrics.js --run-checks`
 当前分支：`feat/portfolio-showcase-v1`
 
@@ -16,7 +16,7 @@
 - Generation Record seed：6 条
 - Knowledge Document seed：2 条；Knowledge Chunk seed：4 条
 - docs/images 截图文件：13 张
-- README 顶部 / 正文图片引用：6 张
+- README 顶部 / 正文图片引用：4 张
 
 ## 工程质量
 
@@ -24,8 +24,8 @@
 - 后端测试源码中的 `@Test`：20 个
 - GitHub Actions workflow：1 个
 - 前端 build 脚本：`vue-tsc --noEmit && vite build`
-- `npm run build`：通过，耗时 12258ms
-- `mvn test`：通过，耗时 14959ms
+- `npm run build`：通过，耗时 11384ms
+- `mvn test`：通过，耗时 12994ms
 
 ## 性能体验
 
@@ -53,7 +53,7 @@
 - 8 个 Vue 页面文件、8 个真实前端页面路由。
 - 30 个后端 endpoint mapping，覆盖 AI 生成、Trace、Knowledge Base、Prompt、History、Review 等模块。
 - 20 个后端自动化测试源码；若本快照显示 `mvn test` 通过，可写最近一次本地测试通过。
-- 13 张本地截图文件，其中 README 引用 6 张真实页面截图。
+- 13 张本地截图文件，其中 README 引用 4 张真实页面截图。
 
 ## 暂时不能写的数据
 

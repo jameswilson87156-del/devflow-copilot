@@ -759,19 +759,20 @@ onMounted(loadPageData)
 
         <section class="review-bar">
           <div>
-            <strong>Human Review 停点</strong>
-            <span>保存记录后才能标记已审核并确认，继续沿用后端状态机。</span>
+            <strong>Human Review checkpoint</strong>
+            <span>保存记录后才能 Confirm；Request Changes 为 review-only disabled 控制，不伪装自动改代码。</span>
           </div>
           <div class="review-actions">
             <button class="ghost-action" type="button" :disabled="loading" @click="runGenerate">
               <el-icon><RefreshRight /></el-icon>
               重新生成
             </button>
-            <button class="ghost-action" type="button" disabled title="当前后端未提供 Request Changes API，仅作为 Human Review 决策位展示">Request Changes</button>
+            <button class="ghost-action" type="button" :disabled="!result?.recordId" @click="openTrace">View Trace</button>
+            <button class="ghost-action" type="button" disabled title="当前后端未提供 Request Changes API，仅作为 Human Review 决策位展示">Request Changes (disabled)</button>
             <button class="ghost-action" type="button" :disabled="!canSave" @click="saveCurrent">保存记录</button>
             <button class="primary-action" type="button" :disabled="!canConfirm" @click="confirmCurrent">
               <el-icon><CircleCheck /></el-icon>
-              标记已审核 / 确认
+              Confirm / 标记已审核
             </button>
           </div>
         </section>
@@ -789,7 +790,7 @@ onMounted(loadPageData)
             <span>完成时间</span><strong class="mono">{{ formatTime(completedAt) }}</strong>
             <span>Token</span><strong class="mono">{{ totalTokenCount ?? '—' }}</strong>
           </div>
-          <button class="wide-link" type="button" @click="openTrace">查看完整 Trace</button>
+          <button class="wide-link" type="button" @click="openTrace">View Trace / 查看完整 Trace</button>
         </SectionCard>
 
         <SectionCard title="Knowledge References" :subtitle="`${knowledgeReferences.length} 条知识引用`" eyebrow="Knowledge">

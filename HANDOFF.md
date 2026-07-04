@@ -2,6 +2,23 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-04 - Codex - DevFlow 作品集第一版快速收口
+
+- 本轮目标：按用户要求进入作品集第一版收口，不再继续找参考图、不做 Trace Evidence 大改、不做大规模视觉实验；快速达到 GitHub / 简历 / Boss 直聘可展示状态。
+- 启动审查：已读取 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`docs/ARCHITECTURE.md`、`docs/architecture.md`、根目录 `DESIGN.md` 和当前 README / metrics / 前端相关页面；`docs/PRD.md` 与 `docs/DESIGN.md` 当前不存在，已按真实情况处理。
+- 修改范围：`README.md` 改为作品集展示版；`DashboardView.vue`、`WorkbenchView.vue`、`HumanReviewView.vue` 只做小范围展示文案与状态露出；刷新 `docs/images/*.png` 作品集截图；刷新 `docs/metrics/metrics_snapshot.md`；同步 `TODO.md` 和 `HANDOFF.md`。
+- Dashboard 收口：保留现有布局，补齐 `DevFlow Copilot`、`AI Coding 工作台 / Agentic Workflow 控制台`、`Demo Data`、`local-rule fallback`、`OpenAI-compatible Provider 可选`、`数据来源：本地 metrics_snapshot`、今日运行、成功率、平均耗时、待人工复核、Tool Call、知识命中、最近运行和 `Prompt -> Provider -> Trace -> Tool Call -> Human Review` 工作流概览。
+- Workbench 收口：保留现有页面结构，明确 `需求与上下文`、`Prompt 模板`、`Provider 状态`、`Knowledge References`、`生成结果预览 / Artifact Preview`、`Change Summary`、`Trace Summary` 和 `Human Review checkpoint`；动作位包含 `View Trace`、`Confirm / 标记已审核`、`Request Changes (disabled)`，未伪装自动改代码能力。
+- Human Review 收口：保留既有独立 `/reviews` 页面，显式展示复核队列、Artifact 预览、风险标签、复核原因、复核结果、决策按钮和状态历史；要求修改 / 驳回 / 重新生成保持 disabled，因为后端没有对应 API。
+- Trace Evidence：本轮仅重新生成截图，没有继续重构布局或扩展设计；当前 `docs/images/trace-evidence.png` 作为冻结阶段可用截图。
+- README：顶部改为一句话定位和 4 张 canonical 截图展示顺序：Dashboard、Workbench、Trace Evidence、Human Review；新增核心功能、技术栈、数据边界、Metrics Snapshot 和验证命令，明确默认本地 Demo 数据、默认 local-rule fallback、不依赖真实 API Key、OpenAI-compatible 可选、不声称生产级能力或真实用户 / 收益。
+- Metrics：执行 `node scripts/collect-portfolio-metrics.js --run-checks` 成功，刷新 `docs/metrics/metrics_snapshot.md`。最新快照采集时间 `2026-07-04T08:44:49.731Z`，记录前端页面文件 8 个、真实 component route 8 个、后端 endpoint mapping 30 个、后端测试源码 `@Test` 20 个、`docs/images` 截图文件 13 张、README 图片引用 4 张；默认 8080 关键接口仍标记为未采集 / HTTP 404。
+- 截图：临时后端 `127.0.0.1:18081`、临时前端 `127.0.0.1:5176`，前端通过 `VITE_API_PROXY_TARGET=http://127.0.0.1:18081` 连接本地真实 API；执行 `node scripts/capture-portfolio-screenshots.mjs` 成功，生成 / 刷新 `dashboard.png`、`workbench.png`、`trace-evidence.png`、`human-review.png` 以及现有兼容别名。已打开检查 4 张 canonical 截图，页面非空、来自本地路由，不是聊天截图、第三方截图或 AI concept 图。
+- 验证结果：`cd frontend && npm run build` 通过；`cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`node scripts/collect-portfolio-metrics.js --run-checks` 通过；`node scripts/capture-portfolio-screenshots.mjs` 通过；`git diff --check` 通过。前端 build 仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+- 服务处理：截图后已关闭本轮启动的 18081 / 5176 临时服务；原本已存在的 5174 旧服务未动。
+- 保留边界：未接真实 API Key，未新增生产依赖，未修改后端业务逻辑，未把 local-rule 包装成真实 LLM，未把 demo seed / UI-only 字段写成生产数据，未把 Knowledge Base 写成向量数据库，未声称完整多 Agent Runtime 或生产 SaaS。
+- 后续可选但本轮不做：前端 bundle split / manual chunks、README GIF、Vitest 最小测试、Docker Compose runtime 复验、更细 UI polish；第一版收口后不建议继续审美反复。
+
 ## 2026-07-04 - Codex - Trace Evidence 目标图单页重做
 
 - 本轮目标：只重做 Trace Evidence 页面，确认并使用 `.local/visual_targets/trace-evidence-target.png` 作为唯一视觉参考；未做 Dashboard、Workbench、Human Review，未根据公开参考图自由设计。

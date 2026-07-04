@@ -582,6 +582,30 @@
   - `node scripts/capture-portfolio-screenshots.mjs --only=trace-evidence`：通过，生成本地真实截图 `docs/images/trace-evidence.png`。
 - 建议 commit message：`feat: rebuild trace evidence showcase page`
 
+## P1-19：DevFlow 作品集第一版快速收口 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户要求进入作品集第一版收口，冻结当前 Trace Evidence，不再继续审美反复、参考图搜索或大规模视觉实验，目标是快速达到 GitHub / 简历 / Boss 直聘可展示状态。
+- 涉及文件：`README.md`、`frontend/src/views/DashboardView.vue`、`frontend/src/views/WorkbenchView.vue`、`frontend/src/views/HumanReviewView.vue`、`docs/images/*.png`、`docs/metrics/metrics_snapshot.md`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - README 改为作品集展示版，使用一句话定位、4 张 canonical 截图、核心功能、技术栈、数据边界、Metrics Snapshot 和本地验证命令。
+  - Dashboard 只做小范围收口：补齐 `知识命中` 文案，并把工作流概览顺序统一为 `Prompt -> Provider -> Trace -> Tool Call -> Human Review`。
+  - Workbench 只做小范围收口：Human Review 停点改为 `Human Review checkpoint`，显式展示 `View Trace`、`Request Changes (disabled)` 和 `Confirm / 标记已审核`。
+  - Human Review 只做小范围收口：决策面板显式展示 `风险标签`、`复核结果`、`复核原因` 和 disabled 决策按钮；未新增后端 Reject / Request Changes API。
+  - Trace Evidence 保持冻结状态，本轮未继续重构布局，只重新生成当前真实页面截图。
+  - 重新生成 canonical 截图：`docs/images/dashboard.png`、`docs/images/workbench.png`、`docs/images/trace-evidence.png`、`docs/images/human-review.png`，并同步刷新现有兼容截图别名。
+- 数据来源与边界：
+  - 页面和 README 明确标注 `Demo Data`、`local-rule fallback`、`OpenAI-compatible 可选`、不连接真实 API Key。
+  - README 不声称生产级能力、真实用户、线上收益、真实 LLM 推理、向量数据库或完整多 Agent Runtime。
+  - `.local/` 临时服务日志和本地参考截图继续保持 ignored，未加入 Git。
+- 验证结果：
+  - `cd frontend && npm run build`：通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - `cd backend && mvn test`：通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `node scripts/collect-portfolio-metrics.js --run-checks`：通过并刷新 `docs/metrics/metrics_snapshot.md`；当前快照显示前端页面文件 8 个、真实 component route 8 个、后端 endpoint mapping 30 个、测试源码 `@Test` 20 个、README 图片引用 4 张。
+  - `node scripts/capture-portfolio-screenshots.mjs`：通过；临时后端 `127.0.0.1:18081`、临时前端 `127.0.0.1:5176`，使用 `VITE_API_PROXY_TARGET=http://127.0.0.1:18081` 连接本地真实 API。
+  - 已打开检查 4 张 canonical 截图，页面非空、来自本地运行页面，未使用第三方截图或 AI 生成图替代。
+- 建议 commit message：`feat: finalize devflow portfolio showcase v1`
+
 ## 下一轮建议
 
-建议下一步先由用户人工查看 `docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/human-review-trace-detail.png` 等本地真实截图，再决定是否进入第二阶段 README 展示文案、截图编排或更细的页面 polish。继续保持不提交 API Key、不提交 `.env`、不提交 `.local/`、不提交 `node_modules` / `dist` / `target` / 日志文件。
+作品集第一版已经进入可展示收口状态。后续可选优化应单独开小任务处理，例如前端 bundle split / manual chunks、README 追加 GIF、前端 Vitest 最小测试、Docker Compose runtime 复验；不要在第一版收口任务中继续做审美反复或 Trace Evidence 大改。继续保持不提交 API Key、不提交 `.env`、不提交 `.local/`、不提交 `node_modules` / `dist` / `target` / 日志文件。

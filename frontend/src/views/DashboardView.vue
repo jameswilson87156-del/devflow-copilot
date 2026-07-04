@@ -144,7 +144,7 @@ const kpiItems = computed(() => {
       tone: 'info',
     },
     {
-      label: '知识库命中',
+      label: '知识命中',
       value: knowledgeReferences.value.length || DASHBOARD_SAFE_FALLBACK.emptyMetric,
       code: 'RAG Hits',
       tone: 'success',
@@ -545,7 +545,7 @@ onMounted(loadDashboard)
         </div>
       </SectionCard>
 
-      <SectionCard class="workflow-overview-card" title="Agent Workflow Overview" subtitle="Prompt -> Provider -> Tool Call -> Trace -> Human Review" eyebrow="Workflow">
+      <SectionCard class="workflow-overview-card" title="工作流概览" subtitle="Prompt -> Provider -> Trace -> Tool Call -> Human Review" eyebrow="Workflow Overview">
         <div class="overview-flow">
           <div v-for="(step, index) in WORKFLOW_STEPS" :key="step.key" class="overview-step">
             <span class="overview-step__node mono">{{ index + 1 }}</span>

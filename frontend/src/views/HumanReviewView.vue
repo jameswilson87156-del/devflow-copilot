@@ -286,10 +286,16 @@ onMounted(loadPage)
       </section>
 
       <aside class="decision-panel">
-        <SectionCard title="人工复核决策面板" subtitle="通过沿用现有 save/confirm；其他决策位为配置预留" eyebrow="Decision">
+        <SectionCard title="人工复核决策 / 复核结果" subtitle="通过沿用现有 save/confirm；Request Changes / Reject / 重新生成为 demo disabled 控制" eyebrow="Decision">
+          <span class="decision-label">风险标签</span>
           <div class="risk-tags">
             <StatusBadge v-for="tag in riskTags" :key="tag.label" :status="tag.status" :label="tag.label" />
             <span v-if="!riskTags.length" class="mini-empty">暂无风险标签。</span>
+          </div>
+
+          <div class="review-result-line">
+            <span>复核结果</span>
+            <strong>{{ statusText(selectedItem?.review?.reviewStatus || selectedItem?.record.status) }}</strong>
           </div>
 
           <div class="review-reason">
@@ -585,9 +591,42 @@ onMounted(loadPage)
   margin-top: 12px;
 }
 
+.decision-label,
 .review-reason span {
   color: var(--color-text-disabled);
   font-size: 10px;
+}
+
+.decision-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.review-result-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.review-result-line span {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+}
+
+.review-result-line strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .decision-actions {
