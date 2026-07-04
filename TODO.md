@@ -499,9 +499,37 @@
   - `node scripts/collect-portfolio-metrics.js --run-checks` 成功生成 `docs/metrics/metrics_snapshot.md`。
   - `cd frontend && npm run build` 由指标脚本执行通过；仍有既有 VueUse PURE 注释提示。
   - `cd backend && mvn test` 由指标脚本执行通过，20 tests passed。
-  - 后端默认 `http://127.0.0.1:8080/api/dashboard/stats` 未作为本轮服务启动验收采集成功，指标快照标记为“当前未采集 / 默认接口不可用（HTTP 404）”。
+- 后端默认 `http://127.0.0.1:8080/api/dashboard/stats` 未作为本轮服务启动验收采集成功，指标快照标记为“当前未采集 / 默认接口不可用（HTTP 404）”。
 - 建议 commit message：`docs: add portfolio audit and metrics plan`
+
+## P1-16：公开前端参考截图采集与索引 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户要求补充公开前端参考截图，仅用于内部视觉分析；不登录、不绕过权限、不复用第三方截图、不进入前端代码改造。
+- 涉及文件：`.gitignore`、`docs/frontend_reference_screenshot_index.md`、`TODO.md`、`HANDOFF.md`。
+- 本地 ignored 产物：
+  - `.local/capture-reference-screenshots.mjs`
+  - `.local/reference_screenshots/*.png`
+  - `.local/reference_screenshots/results.json`
+- 完成内容：
+  - 在 `.gitignore` 中补充 `.local/` 与 `.local/reference_screenshots/`，确保第三方参考截图不会进入 Git。
+  - 使用本地 Playwright 自动化访问公开页面并截图，全部保存到 `.local/reference_screenshots/`。
+  - 新增 `docs/frontend_reference_screenshot_index.md`，记录采集时间、联网状态、来源名称、URL、本地截图文件名、访问结果、适合参考的 DevFlow 页面、可借鉴点、不能照搬点和第一阶段采用结论。
+- 实际采集结果：
+  - 共 16 个公开目标页面，成功 16 个，失败 0 个，跳过 0 个。
+  - 之所以生成到 `16_promptfoo_github.png`，是因为用户实际列出的公开来源共有 16 个。
+  - 已采集来源包括：Ant Design Pro Analysis、Ant Design Pro Monitor、Arco Design、Semi Design、Google Cloud Console、Google Cloud Monitoring Dashboards、Huawei Cloud Management Console Overview、Alibaba Cloud SLS Dashboard、Langfuse、LangSmith Observability、Helicone、Arize Phoenix GitHub、AgentOps GitHub、Dify GitHub、Open WebUI GitHub、Promptfoo GitHub。
+- 保留边界：
+  - 未登录任何账号。
+  - 未绕过权限、付费墙、验证码、反爬或访问限制。
+  - 未把任何第三方截图复制到 `docs/images/` 或 README。
+  - 未开始 Vue、CSS、README、截图脚本或前端页面改造。
+- 验证结果：
+  - `node .local/capture-reference-screenshots.mjs` 成功执行。
+  - `.local/reference_screenshots/results.json` 记录 `networkAvailable=true`、`total=16`、全部 `status=success`。
+  - `git status --short` 只显示 `.gitignore` 和 `docs/frontend_reference_screenshot_index.md` 为本轮可提交改动；`.local/` 截图目录未进入 Git。
+- 建议 commit message：`docs: add frontend reference screenshot index`
 
 ## 下一轮建议
 
-建议下一步先升级 README 的作品集指标小节，引用 `docs/metrics/metrics_snapshot.md`，并补充 dev / Docker / screenshot / production demo 的端口用途表。继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。
+建议下一步先基于 `docs/frontend_reference_research.md`、`docs/frontend_moodboard.md`、`docs/frontend_showcase_design.md` 和 `docs/frontend_reference_screenshot_index.md` 让用户确认前端视觉落地规格；确认前不要进入 UI 代码改造。继续保持不提交 API Key、不提交 `.env`、不提交 `node_modules` / `dist` / `target` / 日志文件。

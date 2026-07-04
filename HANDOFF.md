@@ -2,6 +2,17 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-04 - Codex - 公开前端参考截图采集与索引
+
+- 做了什么：按用户新增要求，只做公开前端参考截图采集和索引，不改 Vue、CSS、README、截图脚本，不进入前端代码改造。先检查 `.gitignore`，确认原本未忽略 `.local/`，随后补充 `.local/` 和 `.local/reference_screenshots/`。
+- 访问边界：只访问公开网页；未登录任何账号；未绕过权限、付费墙、验证码、反爬或访问限制；未下载/复用/提交第三方 Logo、图片素材或产品截图到 GitHub。
+- 本地脚本：新增 `.local/capture-reference-screenshots.mjs` 作为 ignored 的本地 Playwright 采集脚本，只用于当前机器抓取公开参考截图。该脚本和所有截图都位于 `.local/`，不会纳入 Git。
+- 实际采集：执行 `node .local/capture-reference-screenshots.mjs` 成功，输出到 `.local/reference_screenshots/`。本轮共采集 16 个目标页面，成功 16 个、失败 0 个、跳过 0 个。之所以有 `16_promptfoo_github.png`，是因为用户实际列出的目标来源共有 16 个。
+- 已采集来源：Ant Design Pro Dashboard Analysis、Ant Design Pro Dashboard Monitor、Arco Design、Semi Design、Google Cloud Console、Google Cloud Monitoring Dashboards、Huawei Cloud Management Console Overview、Alibaba Cloud SLS Dashboard、Langfuse、LangSmith Observability、Helicone、Arize Phoenix GitHub、AgentOps GitHub、Dify GitHub、Open WebUI GitHub、Promptfoo GitHub。
+- 新增索引：`docs/frontend_reference_screenshot_index.md`，记录采集时间、联网状态、来源名称、URL、本地截图文件名、访问结果、适合参考的 DevFlow 页面、可借鉴点、不能照搬点和第一阶段采用结论。文档已明确：这些截图仅用于内部视觉分析，不能复制到 `docs/images/` 或 README。
+- 编码与 Git：`docs/frontend_reference_screenshot_index.md` 需要转为 UTF-8 with BOM；`.local/reference_screenshots/` 中的 PNG 和 `results.json` 不应 `git add`。本轮可提交改动应仅包含 `.gitignore`、`docs/frontend_reference_screenshot_index.md`、`TODO.md`、`HANDOFF.md`。
+- 下一步：请先让用户确认这些公开参考截图是否用于更新前端视觉落地规格；确认前不要进入 UI 代码改造。
+
 ## 2026-07-04 - Codex - 作品集化只读审查、公开参考调研与指标采集地基
 
 - 做了什么：按附件要求先做作品集化第一阶段，不直接改正式 UI 页面、不改后端业务逻辑、不新增生产依赖、不接真实 API Key。开始前已读取 `AGENTS.md`、`TODO.md`、`HANDOFF.md`、`docs/ARCHITECTURE.md`、附件请求；`docs/PRD.md` 和 `docs/DESIGN.md` 当前不存在，实际参考了根目录 `DESIGN.md`、`docs/frontend-design.md`、README、API 文档、路由、Controller、截图脚本、测试和 migration。
