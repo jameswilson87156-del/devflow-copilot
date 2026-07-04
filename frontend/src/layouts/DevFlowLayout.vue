@@ -9,7 +9,7 @@ const route = useRoute()
 
 const currentTitle = computed(() => {
   const item = navItems.find((nav) => nav.name === route.name)
-  return item?.label ?? 'DevFlow Copilot'
+  return item?.displayTitle ?? item?.label ?? 'DevFlow Copilot'
 })
 </script>
 

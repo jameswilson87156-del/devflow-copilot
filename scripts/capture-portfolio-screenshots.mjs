@@ -10,6 +10,11 @@ const imageDir = path.join(rootDir, 'docs', 'images')
 
 const baseUrl = process.env.DEVFLOW_SCREENSHOT_URL || 'http://127.0.0.1:5174'
 const apiUrl = process.env.DEVFLOW_API_URL || 'http://127.0.0.1:18081/api'
+const onlyShot = readOnlyShotArg()
+const viewport = {
+  width: Number(process.env.DEVFLOW_SCREENSHOT_WIDTH || 1440),
+  height: Number(process.env.DEVFLOW_SCREENSHOT_HEIGHT || 900),
+}
 
 const shots = [
   { route: '/', file: 'dashboard.png', aliases: ['dashboard-agentic.png'], waitFor: '.dashboard' },
@@ -19,6 +24,11 @@ const shots = [
   { route: '/prompts', file: 'prompt-studio.png', waitFor: '.templates-page', prepare: preparePromptStudio },
   { route: '/reviews', file: 'human-review.png', aliases: ['human-review-trace-detail.png'], waitFor: '.human-review-page' },
 ]
+
+function readOnlyShotArg() {
+  const arg = process.argv.find(item => item.startsWith('--only='))
+  return (arg ? arg.slice('--only='.length) : process.env.DEVFLOW_SCREENSHOT_ONLY || '').trim()
+}
 
 async function importPlaywright() {
   const requireFromFrontend = createRequire(path.join(frontendDir, 'package.json'))
@@ -56,7 +66,8 @@ async function waitForService(url, label) {
 
 async function ensureDemoState() {
   const projects = await api('/projects')
-  const projectId = projects[0]?.id
+  const project = projects.find(item => item.projectName === 'DevFlow Copilot') || projects[0]
+  const projectId = project?.id
   if (!projectId) throw new Error('No project is available for portfolio screenshots')
 
   const documents = await api('/knowledge/documents')
@@ -80,19 +91,37 @@ async function ensureDemoState() {
     })
   }
 
-  const result = await api('/ai/requirement-split', {
-    method: 'POST',
-    body: JSON.stringify({
-      projectId,
-      input: '为 DevFlow Copilot 准备作品集展示：解释 local-rule、Generation Trace、Agent Run Trace、Knowledge Base 引用和 Human Review 的真实边界。',
-      extraContext: '截图证据收口任务，只生成 review-only Artifact，不自动改代码、不自动提交 Git。',
-      knowledgeQuery: 'local-rule provider generation trace agent run human review knowledge base API key',
-    }),
-  })
+  const existingRuns = await api(`/agent-runs?projectId=${projectId}`).catch(() => [])
+  const scenarios = [
+    '整理 Trace Evidence 摘要',
+    '解释 local-rule fallback 路径',
+    '复核 README 的 Provider 选择',
+    '校验知识引用注入',
+    '对比 Tool Call 与 Prompt 输出',
+  ]
+  const missingRuns = Math.max(1, 5 - existingRuns.length)
+  let result
 
-  if (result.recordId) {
-    await api(`/generations/${result.recordId}/save`, { method: 'POST' })
-    await api(`/generations/${result.recordId}/confirm`, { method: 'POST' })
+  for (let index = 0; index < missingRuns; index += 1) {
+    result = await api('/ai/requirement-split', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId,
+        input: `${scenarios[index]}：解释 local-rule、Generation Trace、Agent Run Trace、Knowledge Base 引用和 Human Review 的真实边界。`,
+        extraContext: '截图证据收口任务，只生成 review-only Artifact，不自动改代码、不自动提交 Git。',
+        knowledgeQuery: 'local-rule provider generation trace agent run human review knowledge base API key',
+      }),
+    })
+
+    if (result.recordId) {
+      await api(`/generations/${result.recordId}/save`, { method: 'POST' })
+      await api(`/generations/${result.recordId}/confirm`, { method: 'POST' })
+    }
+  }
+
+  if (!result) {
+    const latestRun = [...existingRuns].sort((a, b) => (b.id || 0) - (a.id || 0))[0]
+    result = { recordId: latestRun?.generationRecordId, agentRunId: latestRun?.id }
   }
 
   return { projectId, recordId: result.recordId, agentRunId: result.agentRunId }
@@ -154,10 +183,17 @@ async function capture() {
   } catch {
     browser = await chromium.launch({ headless: true, args: ['--hide-scrollbars'] })
   }
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 })
+  const page = await browser.newPage({ viewport, deviceScaleFactor: 1 })
 
   try {
-    for (const shot of shots) {
+    const selectedShots = onlyShot
+      ? shots.filter(shot => shot.file === onlyShot || shot.file.replace(/\.png$/, '') === onlyShot)
+      : shots
+    if (!selectedShots.length) {
+      throw new Error(`No screenshot target matched --only=${onlyShot}`)
+    }
+
+    for (const shot of selectedShots) {
       const query = shot.query ? shot.query(demo) : ''
       await page.goto(`${baseUrl}${shot.route}${query}`, { waitUntil: 'networkidle' })
       await page.waitForSelector(shot.waitFor, { timeout: 45000 })
@@ -168,7 +204,7 @@ async function capture() {
       const file = path.join(imageDir, shot.file)
       const screenshot = await page.screenshot({ path: file, fullPage: false, animations: 'disabled' })
       const outputFiles = [file]
-      for (const alias of shot.aliases || []) {
+      for (const alias of onlyShot ? [] : shot.aliases || []) {
         const aliasFile = path.join(imageDir, alias)
         await writeFile(aliasFile, screenshot)
         outputFiles.push(aliasFile)

@@ -254,8 +254,21 @@ textarea {
   font-weight: 550;
 }
 
+.workspace-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .workspace-label small {
-  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -338,7 +351,7 @@ textarea {
 .sidebar-status strong,
 .sidebar-status span {
   display: block;
-  white-space: nowrap;
+  line-height: 18px;
 }
 
 .sidebar-status strong {
@@ -346,7 +359,6 @@ textarea {
 }
 
 .sidebar-status span {
-  margin-top: var(--space-1);
   color: var(--color-text-secondary);
   font-size: 9px;
 }

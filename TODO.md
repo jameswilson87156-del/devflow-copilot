@@ -559,6 +559,29 @@
   - `git diff --check`：通过，仅有 LF/CRLF 提示。
 - 建议 commit message：`feat: upgrade devflow portfolio showcase UI`
 
+## P1-18：Trace Evidence 目标图单页重做 ✅ 本轮完成
+
+- 状态：**done**
+- 背景：用户明确要求本轮只做 `Trace Evidence` 页面，并以 `.local/visual_targets/trace-evidence-target.png` 作为唯一视觉参考；不得改 Dashboard、Workbench、Human Review 或根据公开参考图自由设计。
+- 涉及文件：`frontend/src/views/AgentRunTraceView.vue`、`frontend/src/router/index.ts`、`frontend/src/layouts/DevFlowLayout.vue`、`frontend/src/components/SidebarNav.vue`、`frontend/src/components/TopBar.vue`、`frontend/src/styles/theme.css`、`scripts/capture-portfolio-screenshots.mjs`、`docs/images/trace-evidence.png`、`docs/metrics/metrics_snapshot.md`、`TODO.md`、`HANDOFF.md`。
+- 完成内容：
+  - Trace Evidence 页面按目标图重做为左侧运行记录、中间执行时间线、右侧步骤详情与人工复核、底部证据详情的深色开发者工具布局。
+  - 页面标题改为 `执行证据 Trace Evidence`，副标题说明从 Prompt 渲染到人工复核的可解释证据链。
+  - 当前执行摘要包含执行步骤、知识命中、Tool Call、Token 用量、复核结果 5 个指标卡。
+  - 左侧导航和顶部栏只做与目标图一致的轻量文字 / badge 调整：`DevFlow`、当前工作空间、中文分组导航、当前选中的 `执行证据 Trace`、`Demo Data`、`local-rule fallback`、`OpenAI-compatible 可选`。
+  - 底部证据详情提供 `Raw JSON / Rendered Prompt / Fallback Reason / Tool I/O` 标签页，默认显示 Raw JSON。
+  - 截图脚本新增 `--only=trace-evidence` 单页截图能力，并支持 1440x900 viewport；单页模式只写 `docs/images/trace-evidence.png`，不刷新其它页面截图。
+- 数据来源与边界：
+  - 页面数据来自本地 H2 Demo、现有 Agent Run Trace / Generation Trace / Knowledge Reference / Human Review 接口和 local-rule 生成记录。
+  - 页面明确展示 `Demo Data`、`local-rule fallback`、`OpenAI-compatible 可选` 和不连接真实 API Key 的边界。
+  - 未改后端核心业务逻辑，未接真实 API Key，未把 local-rule 写成真实 LLM，未把 demo 数据写成生产数据。
+- 验证结果：
+  - `cd frontend && npm run build`：通过；仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+  - `cd backend && mvn test`：通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`。
+  - `node scripts/collect-portfolio-metrics.js --run-checks`：通过，刷新 `docs/metrics/metrics_snapshot.md`。
+  - `node scripts/capture-portfolio-screenshots.mjs --only=trace-evidence`：通过，生成本地真实截图 `docs/images/trace-evidence.png`。
+- 建议 commit message：`feat: rebuild trace evidence showcase page`
+
 ## 下一轮建议
 
 建议下一步先由用户人工查看 `docs/images/dashboard-agentic.png`、`docs/images/workbench-running.png`、`docs/images/agent-run-trace.png`、`docs/images/human-review-trace-detail.png` 等本地真实截图，再决定是否进入第二阶段 README 展示文案、截图编排或更细的页面 polish。继续保持不提交 API Key、不提交 `.env`、不提交 `.local/`、不提交 `node_modules` / `dist` / `target` / 日志文件。

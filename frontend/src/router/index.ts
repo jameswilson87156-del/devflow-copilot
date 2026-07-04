@@ -24,6 +24,7 @@ export interface NavItem {
   path?: string
   name: string
   label: string
+  displayTitle?: string
   group: '工作流' | '可观测性' | '知识与引用' | '治理与审核' | '配置'
   icon: Component
   disabled?: boolean
@@ -35,70 +36,78 @@ export const navItems: NavItem[] = [
   {
     path: '/',
     name: 'Dashboard',
-    label: 'Dashboard',
+    label: '总览 Dashboard',
+    displayTitle: '总览 Dashboard',
     group: '工作流',
     icon: DataBoard,
   },
   {
     path: '/workbench',
     name: 'Workbench',
-    label: 'Workbench',
+    label: '工作台 Workbench',
+    displayTitle: '工作台 Workbench',
     group: '工作流',
     icon: Cpu,
   },
   {
     path: '/prompts',
     name: 'PromptTemplates',
-    label: 'Prompt Templates',
+    label: 'Prompt 模板',
+    displayTitle: 'Prompt 模板',
     group: '工作流',
     icon: ChatLineSquare,
   },
   {
     path: '/agent-runs',
     name: 'AgentRunTrace',
-    label: 'Trace Evidence',
+    label: '执行证据 Trace',
+    displayTitle: '执行证据 Trace Evidence',
     group: '可观测性',
     icon: DataLine,
   },
   {
     path: '/history',
     name: 'GenerationHistory',
-    label: 'Generation History',
+    label: '生成历史',
+    displayTitle: '生成历史 Generation History',
     group: '可观测性',
     icon: Clock,
   },
   {
     path: '/logs',
     name: 'LogAnalyzer',
-    label: 'Log Analyzer',
+    label: '日志分析',
+    displayTitle: '日志分析 Log Analyzer',
     group: '可观测性',
     icon: Document,
   },
   {
-    name: 'ToolCalls',
-    label: 'Tool Calls',
-    group: '可观测性',
-    icon: Cpu,
-    disabled: true,
-    hint: '当前在 Trace Evidence 页面查看 Tool Call 明细',
-  },
-  {
     path: '/knowledge',
     name: 'KnowledgeBase',
-    label: 'Knowledge Base',
+    label: '知识库',
+    displayTitle: '知识库 Knowledge Base',
     group: '知识与引用',
     icon: Connection,
   },
   {
+    name: 'KnowledgeReferences',
+    label: '知识引用',
+    group: '知识与引用',
+    icon: Files,
+    disabled: true,
+    hint: '当前在 Trace Evidence 和 Knowledge Base 页面查看引用明细',
+  },
+  {
     path: '/reviews',
     name: 'HumanReview',
-    label: 'Human Review',
+    label: '人工复核',
+    displayTitle: '人工复核 Human Review',
     group: '治理与审核',
     icon: DataLine,
   },
   {
     name: 'Provider',
-    label: 'Provider',
+    label: 'Provider 配置',
     group: '配置',
     icon: Connection,
     disabled: true,
@@ -106,7 +115,7 @@ export const navItems: NavItem[] = [
   },
   {
     name: 'Settings',
-    label: 'Settings',
+    label: '系统设置',
     group: '配置',
     icon: Files,
     disabled: true,

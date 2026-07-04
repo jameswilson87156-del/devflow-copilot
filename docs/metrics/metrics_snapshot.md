@@ -1,6 +1,6 @@
 ﻿# DevFlow Copilot 作品集指标快照
 
-采集时间：2026-07-04T07:39:58.133Z
+采集时间：2026-07-04T08:24:37.805Z
 采集命令：`node scripts/collect-portfolio-metrics.js --run-checks`
 当前分支：`feat/portfolio-showcase-v1`
 
@@ -24,15 +24,15 @@
 - 后端测试源码中的 `@Test`：20 个
 - GitHub Actions workflow：1 个
 - 前端 build 脚本：`vue-tsc --noEmit && vite build`
-- `npm run build`：通过，耗时 12175ms
-- `mvn test`：通过，耗时 16076ms
+- `npm run build`：通过，耗时 12258ms
+- `mvn test`：通过，耗时 14959ms
 
 ## 性能体验
 
 - Node.js 版本：v24.16.0
 - 前端 bundle 统计：已采集
 - JS assets：19 个，2.2 MB
-- CSS assets：15 个，470 KB
+- CSS assets：15 个，474 KB
 - 关键接口响应：当前未采集 / 默认接口不可用（HTTP 404）
 - 关键接口 URL：`http://127.0.0.1:8080/api/dashboard/stats`
 - 关键接口单次耗时：当前未采集

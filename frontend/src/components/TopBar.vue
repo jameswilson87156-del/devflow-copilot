@@ -23,7 +23,7 @@ defineProps<{
     <div class="topbar-actions">
       <span class="system-chip">
         <el-icon><Connection /></el-icon>
-        Demo Data / 本地接口
+        Demo Data
       </span>
       <ProviderBadge provider="local-rule fallback" />
       <span class="system-chip accent">

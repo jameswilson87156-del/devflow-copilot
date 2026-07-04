@@ -2,6 +2,17 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-04 - Codex - Trace Evidence 目标图单页重做
+
+- 本轮目标：只重做 Trace Evidence 页面，确认并使用 `.local/visual_targets/trace-evidence-target.png` 作为唯一视觉参考；未做 Dashboard、Workbench、Human Review，未根据公开参考图自由设计。
+- 修改范围：重做 `frontend/src/views/AgentRunTraceView.vue`；为贴近目标图轻量调整 `frontend/src/router/index.ts`、`frontend/src/layouts/DevFlowLayout.vue`、`frontend/src/components/SidebarNav.vue`、`frontend/src/components/TopBar.vue`、`frontend/src/styles/theme.css`；更新 `scripts/capture-portfolio-screenshots.mjs` 的单页截图能力；刷新 `docs/images/trace-evidence.png` 和 `docs/metrics/metrics_snapshot.md`。
+- 页面结果：Trace Evidence 现在包含左侧导航、当前工作空间、中文分组导航、选中的 `执行证据 Trace`、底部本地 Demo 模式卡片、顶部面包屑 / 搜索 / Demo Data / local-rule fallback / OpenAI-compatible 可选标签、页面标题区、当前执行摘要 5 个指标卡、左中右三栏主体和底部证据详情。
+- 三栏结构：左栏为运行记录列表且当前项高亮；中栏为 `01 Prompt 渲染` 到 `07 复核已确认` 的执行时间线，展示状态、耗时、Provider / Model；右栏为步骤详情、风险与证据、复核结果和状态历史；底部证据详情默认展示 Raw JSON，并保留 Rendered Prompt / Fallback Reason / Tool I/O 标签。
+- 截图：临时后端 `127.0.0.1:18081`、临时前端 `127.0.0.1:5176`，通过 `VITE_API_PROXY_TARGET=http://127.0.0.1:18081` 连接本地真实 API；执行 `node scripts/capture-portfolio-screenshots.mjs --only=trace-evidence` 生成 `docs/images/trace-evidence.png`，视口为 1440x900，不使用目标图、聊天截图或第三方截图替代。
+- 数据边界：页面数据来自本地 H2 Demo、现有 Agent Run Trace / Generation Trace / Knowledge Reference / Human Review 接口和 local-rule 生成记录；页面明确展示 `Demo Data`、`local-rule fallback`、`OpenAI-compatible 可选` 和不连接真实 API Key；未改后端核心业务逻辑，未接真实 API Key，未把 local-rule 写成真实 LLM。
+- 验证结果：`cd frontend && npm run build` 通过；`cd backend && mvn test` 通过，`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`；`node scripts/collect-portfolio-metrics.js --run-checks` 通过并刷新 metrics；`node scripts/capture-portfolio-screenshots.mjs --only=trace-evidence` 通过。前端 build 仍有既有 VueUse PURE 注释提示和 Element Plus / Markdown 大 chunk 警告。
+- 待收尾：提交前还需执行 `git diff --check` 并确认 git diff 只包含本轮 Trace Evidence 相关文件。
+
 ## 2026-07-04 - Codex - Trace Evidence 冻结与 Dashboard / Workbench 第一阶段收口
 
 - 本轮目标：把本地真实 `docs/images/trace-evidence.png` 作为第一阶段视觉基准，冻结 Trace Evidence 大结构，并把同一套深色企业级 AI DevTools 视觉语言收口到 Dashboard 与 Workbench；未继续重写 Knowledge Base / Prompt Templates，Human Review 只纳入既有第一阶段成果与截图。
