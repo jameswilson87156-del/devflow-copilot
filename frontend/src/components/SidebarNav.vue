@@ -31,8 +31,8 @@ const groups = computed(() => {
       <span class="mono">当前工作空间</span>
       <strong>DevFlow Copilot</strong>
       <div class="workspace-badges">
-        <small>Demo Data</small>
-        <small>local-rule fallback</small>
+        <small>Local Demo</small>
+        <small>API-backed UI</small>
       </div>
     </div>
 
@@ -45,11 +45,12 @@ const groups = computed(() => {
             :to="item.path"
             class="nav-item"
             :class="{ active: route.name === item.name }"
+            :title="item.label"
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
           </RouterLink>
-          <button v-else class="nav-item disabled" type="button" :title="item.hint || '待接入'" disabled>
+          <button v-else class="nav-item disabled" type="button" :title="item.hint || item.label" disabled>
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
           </button>

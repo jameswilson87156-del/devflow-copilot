@@ -221,7 +221,7 @@ textarea {
 
 .brand-copy span {
   color: var(--color-text-secondary);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0;
 }
 
@@ -244,7 +244,7 @@ textarea {
 
 .workspace-label span {
   color: var(--color-text-disabled);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -271,7 +271,7 @@ textarea {
   background: var(--color-bg-elevated);
   color: var(--color-accent);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .nav-stack {
@@ -360,7 +360,7 @@ textarea {
 
 .sidebar-status span {
   color: var(--color-text-secondary);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .pulse-dot {
@@ -426,7 +426,7 @@ p {
 
 .topbar-title span {
   color: var(--color-text-secondary);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -702,5 +702,197 @@ p {
   .pulse-dot,
   .status-dot.running {
     animation: none;
+  }
+}
+
+/* Phase 1 · minimal Layered Graphite App Shell upgrade */
+.sidebar {
+  background: var(--surface-navigation);
+  border-right-color: var(--line-subtle);
+  transition:
+    width var(--motion-standard) var(--motion-ease),
+    padding var(--motion-standard) var(--motion-ease);
+}
+
+.topbar {
+  grid-template-columns: minmax(180px, 0.75fr) minmax(260px, 520px) minmax(220px, 0.75fr);
+  background: rgba(15, 22, 27, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.topbar-search {
+  background: var(--surface-workspace);
+}
+
+.topbar-page-context {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.topbar-page-context .mono {
+  color: var(--color-text-disabled);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.topbar-page-context span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  background: var(--surface-workspace);
+}
+
+@media (max-width: 1180px) and (min-width: 721px) {
+  :root {
+    --sidebar-width: 72px;
+  }
+
+  .shell {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    width: var(--sidebar-width);
+    height: 100vh;
+    padding: 12px 8px;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .brand-copy,
+  .workspace-label,
+  .nav-group-label,
+  .nav-item span,
+  .sidebar-status {
+    display: none;
+  }
+
+  .nav-stack {
+    gap: 8px;
+    padding: 0;
+  }
+
+  .nav-group {
+    gap: 5px;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 38px;
+    justify-content: center;
+    margin: 0 auto;
+    padding: 0;
+    border-left-width: 1px;
+  }
+
+  .topbar {
+    grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1.4fr) auto;
+    height: var(--topbar-height);
+    min-height: var(--topbar-height);
+    padding: 0 12px;
+  }
+
+  .topbar-actions .system-chip:first-child {
+    display: none;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .content--workspace {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --sidebar-width: 100%;
+    --topbar-height: 0px;
+  }
+
+  .shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: sticky;
+    z-index: 220;
+    top: 0;
+    width: 100%;
+    height: 52px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-subtle);
+    overflow: hidden;
+  }
+
+  .brand {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  .brand-copy,
+  .workspace-label,
+  .nav-group-label,
+  .nav-item span,
+  .sidebar-status {
+    display: none;
+  }
+
+  .nav-stack {
+    display: flex;
+    flex: 1;
+    gap: 4px;
+    padding: 0 0 0 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .nav-stack::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-group {
+    display: contents;
+  }
+
+  .nav-item {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    justify-content: center;
+    padding: 0;
+    border-left-width: 1px;
+  }
+
+  .topbar {
+    display: none;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .content--workspace {
+    padding: 8px 8px max(16px, env(safe-area-inset-bottom));
   }
 }

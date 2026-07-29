@@ -41,7 +41,7 @@ export interface GenerationRecord {
   status: string
   confirmed: boolean
   providerName?: string
-  modelName: string
+  modelName?: string
   promptTemplateId?: number
   promptTemplateName?: string
   promptTemplateVersion?: number

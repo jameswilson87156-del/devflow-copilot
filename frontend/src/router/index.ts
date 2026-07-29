@@ -61,7 +61,7 @@ export const navItems: NavItem[] = [
     path: '/agent-runs',
     name: 'AgentRunTrace',
     label: '执行证据 Trace',
-    displayTitle: '执行证据 Trace Evidence',
+    displayTitle: '执行证据',
     group: '可观测性',
     icon: DataLine,
   },

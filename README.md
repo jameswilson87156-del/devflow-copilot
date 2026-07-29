@@ -22,7 +22,7 @@ DevFlow Copilot 是一个 AI Coding Workbench / Agentic Workflow Console，用�
 
 - Prompt 模板：支持模板变量、版本记录、渲染预览和生成请求关联。
 - Provider 路由 / local-rule fallback：默认本地规则生成，无需 API Key；OpenAI-compatible Provider 为可选代码层适配。
-- Trace Evidence：展示 Prompt 渲染、Provider 选择、Generation Trace、Agent Step、Tool Call、Fallback Reason 和 Human Review 证据链。
+- Run Evidence Workspace：以真实 AgentStep 为主线关联 Tool Call、Provider、Generation 与 Human Review 证据；默认展示 Local Demo / `local-rule`。未配置真实 API Key 时，页面不会包装为真实在线模型调用。
 - Tool Call 记录：记录工具名、输入摘要、输出摘要、状态和耗时，用于解释一次 Agentic Workflow。
 - Human Review：生成结果进入人工复核状态机，不自动改代码、不自动提交 Git。
 - Knowledge References：轻量 Knowledge Base 关键词 / 简单相似度检索，并返回生成引用。

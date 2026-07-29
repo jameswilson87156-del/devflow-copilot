@@ -3,6 +3,8 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'github-markdown-css/github-markdown-dark.css'
 import './styles/theme.css'
+import './styles/tokens.css'
+import './styles/evidence-workspace.css'
 import App from './App.vue'
 import router from './router'
 
