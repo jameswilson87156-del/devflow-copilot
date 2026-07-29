@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc --noEmit && vite build",
+    "test:trace": "node --test tests/runEvidenceViewModel.test.ts",
     "preview": "vite preview --host 0.0.0.0",
     "screenshots": "node ../scripts/capture-screenshots.mjs",
-    "screenshots:portfolio": "node ../scripts/capture-portfolio-screenshots.mjs"
+    "screenshots:portfolio": "node ../scripts/capture-portfolio-screenshots.mjs",
+    "screenshots:evidence-candidates": "node ../scripts/capture-evidence-workspace-candidates.mjs",
+    "screenshots:evidence-real-candidates": "node ../scripts/capture-evidence-workspace-real-candidates.mjs",
+    "screenshots:evidence-freeze-candidates": "node ../scripts/capture-evidence-workspace-freeze-candidates.mjs",
+    "screenshots:evidence-final": "node ../scripts/capture-evidence-workspace-final.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

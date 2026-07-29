@@ -20,7 +20,7 @@ const currentTitle = computed(() => {
     <section class="main-shell">
       <TopBar :title="currentTitle" />
 
-      <main class="content">
+      <main class="content" :class="{ 'content--workspace': route.name === 'AgentRunTrace' }">
         <RouterView />
       </main>
     </section>
