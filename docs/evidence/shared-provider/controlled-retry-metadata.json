@@ -1,0 +1,21 @@
+{
+  "validationType": "controlled-retry",
+  "previousRequestCount": 1,
+  "currentRequestCount": 1,
+  "totalRealRequestCount": 2,
+  "connectivityPreflightPassed": true,
+  "fallbackDisabled": true,
+  "externalRequestAttempted": true,
+  "httpResponseReceived": true,
+  "responseBodyReceived": false,
+  "responseParsingStarted": false,
+  "responseContentPresent": false,
+  "generationRecordPersisted": true,
+  "generationTracePersisted": true,
+  "agentRunPersisted": true,
+  "agentStepPersisted": true,
+  "fallbackUsed": false,
+  "secretScanPassed": true,
+  "failureCategory": "UPSTREAM_SERVER_ERROR",
+  "result": "FAILED"
+}

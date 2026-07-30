@@ -11,5 +11,8 @@ spring:
 devflow:
   ai:
     provider: local-rule
+    base-url: http://127.0.0.1:0
     api-key:
+    model: local-rule-mvp
+    protocol: chat-completions-compatible
     fallback-to-local: true

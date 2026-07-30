@@ -6,9 +6,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AiProviderProperties {
 
     private String provider = "local-rule";
-    private String baseUrl = "https://api.openai.com/v1";
+    private String baseUrl = "";
     private String apiKey = "";
     private String model = "gpt-4.1-mini";
+    private String protocol = "chat-completions-compatible";
     private int timeoutSeconds = 60;
     private int maxTokens = 2048;
     private boolean fallbackToLocal = true;
@@ -21,6 +22,8 @@ public class AiProviderProperties {
     public void setApiKey(String apiKey) { this.apiKey = apiKey; }
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
+    public String getProtocol() { return protocol; }
+    public void setProtocol(String protocol) { this.protocol = protocol; }
     public int getTimeoutSeconds() { return timeoutSeconds; }
     public void setTimeoutSeconds(int timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
     public int getMaxTokens() { return maxTokens; }

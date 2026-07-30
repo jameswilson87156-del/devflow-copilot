@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(properties = {"devflow.ai.provider=local-rule", "devflow.ai.model=synthetic-requested-model", "devflow.ai.api-key=", "devflow.ai.protocol=chat-completions-compatible", "devflow.ai.fallback-to-local=true"})
 @ActiveProfiles("test")
 @Transactional
 class GenerationWorkflowIntegrationTest {
@@ -31,8 +31,16 @@ class GenerationWorkflowIntegrationTest {
         GenerationRecord persisted = recordService.getById(response.getRecordId());
 
         assertThat(response.getProviderName()).isEqualTo("local-rule");
+        assertThat(response.getRequestedProvider()).isEqualTo(response.getActualProvider());
+        assertThat(response.getRequestedModel()).isEqualTo(response.getActualModel());
+        assertThat(response.getFallbackUsed()).isFalse();
+        assertThat(response.getFallbackReason()).isNull();
         assertThat(response.getTotalTokens()).isPositive();
         assertThat(persisted.getStatus()).isEqualTo(GenerationStatus.READY_FOR_REVIEW);
+        assertThat(persisted.getRequestedProvider()).isEqualTo(persisted.getProviderName());
+        assertThat(persisted.getRequestedModel()).isEqualTo(persisted.getModelName());
+        assertThat(persisted.getFallbackUsed()).isFalse();
+        assertThat(persisted.getFallbackReason()).isNull();
         assertThat(persisted.getRenderedPrompt()).contains("需求拆解测试");
     }
 

@@ -1,6 +1,9 @@
 package com.devflow.copilot.service.provider;
 
 import com.devflow.copilot.common.LlmProviderException;
+import com.devflow.copilot.common.ProviderErrorType;
+import com.devflow.copilot.common.ProviderFailureMetadata;
+import com.devflow.copilot.common.ProviderFailureStage;
 import com.devflow.copilot.config.AiProviderProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -26,17 +29,23 @@ public class OpenAiCompatibleGenerationProvider implements GenerationProvider {
 
     @Override
     public ProviderResult generate(ProviderRequest request) {
+        validateProtocol();
         if (properties.getApiKey() == null || properties.getApiKey().isBlank()) {
-            throw new LlmProviderException("OpenAI-compatible Provider 缺少 DEVFLOW_AI_API_KEY");
+            throw new LlmProviderException(ProviderErrorType.API_KEY_MISSING,
+                    ProviderFailureMetadata.atStage(ProviderFailureStage.CONFIG_VALIDATION));
         }
+        String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
+        String clientRequestId = ProviderFailureMetadata.newClientRequestId();
+        long requestStartNanos = System.nanoTime();
         try {
             SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
             int timeoutMs = Math.max(1, properties.getTimeoutSeconds()) * 1000;
             requestFactory.setConnectTimeout(timeoutMs);
             requestFactory.setReadTimeout(timeoutMs);
             RestClient client = RestClient.builder()
-                    .baseUrl(stripTrailingSlash(properties.getBaseUrl()))
+                    .baseUrl(baseUrl)
                     .defaultHeader("Authorization", "Bearer " + properties.getApiKey())
+                    .defaultHeader("X-Client-Request-Id", clientRequestId)
                     .requestFactory(requestFactory)
                     .build();
             Map<String, Object> body = Map.of(
@@ -50,33 +59,50 @@ public class OpenAiCompatibleGenerationProvider implements GenerationProvider {
                     .body(body)
                     .retrieve()
                     .body(JsonNode.class);
-            if (response == null || response.path("choices").isEmpty()) {
-                throw new LlmProviderException("OpenAI-compatible Provider 未返回 choices");
+            if (response == null || !response.path("choices").isArray() || response.path("choices").isEmpty()) {
+                throw new LlmProviderException(ProviderErrorType.INVALID_RESPONSE,
+                        ProviderErrorClassifier.metadataForStage(ProviderFailureStage.RESPONSE_DESERIALIZATION,
+                                clientRequestId, requestStartNanos));
             }
-            String content = response.path("choices").path(0).path("message").path("content").asText();
+            JsonNode message = response.path("choices").path(0).path("message");
+            if (!message.isObject() || !message.hasNonNull("content")) {
+                throw new LlmProviderException(ProviderErrorType.INVALID_RESPONSE,
+                        ProviderErrorClassifier.metadataForStage(ProviderFailureStage.RESPONSE_DESERIALIZATION,
+                                clientRequestId, requestStartNanos));
+            }
+            String content = message.path("content").asText();
             if (content == null || content.isBlank()) {
-                throw new LlmProviderException("OpenAI-compatible Provider 返回了空内容");
+                throw new LlmProviderException(ProviderErrorType.EMPTY_CONTENT,
+                        ProviderErrorClassifier.metadataForStage(ProviderFailureStage.CONTENT_EXTRACTION,
+                                clientRequestId, requestStartNanos));
             }
             JsonNode usage = response.path("usage");
             Integer promptTokens = usage.has("prompt_tokens") ? usage.path("prompt_tokens").asInt() : null;
             Integer completionTokens = usage.has("completion_tokens") ? usage.path("completion_tokens").asInt() : null;
             Integer totalTokens = usage.has("total_tokens") ? usage.path("total_tokens").asInt() : null;
-            return new ProviderResult(content, key(), properties.getModel(), promptTokens, completionTokens, totalTokens, null);
+            return new ProviderResult(content, key(), properties.getModel(), promptTokens, completionTokens, totalTokens, false, null);
         } catch (LlmProviderException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new LlmProviderException("OpenAI-compatible 调用失败：" + safeMessage(ex), ex);
+            throw ProviderErrorClassifier.sanitize(ex, clientRequestId, requestStartNanos,
+                    ProviderFailureStage.REQUEST_BUILD);
         }
     }
 
-    private String stripTrailingSlash(String value) {
+    private void validateProtocol() {
+        if (!"chat-completions-compatible".equals(properties.getProtocol())) {
+            throw new LlmProviderException(ProviderErrorType.PROTOCOL_UNSUPPORTED,
+                    ProviderFailureMetadata.atStage(ProviderFailureStage.CONFIG_VALIDATION));
+        }
+    }
+
+    private String normalizeBaseUrl(String value) {
         if (value == null || value.isBlank()) {
-            throw new LlmProviderException("OpenAI-compatible Provider 缺少 base-url");
+            throw new LlmProviderException(ProviderErrorType.CONNECTION_FAILED,
+                    ProviderFailureMetadata.atStage(ProviderFailureStage.CONFIG_VALIDATION));
         }
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
-    }
-
-    private String safeMessage(Exception ex) {
-        return ex.getMessage() == null || ex.getMessage().isBlank() ? ex.getClass().getSimpleName() : ex.getMessage();
+        String normalized = value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+        String path = "/chat/completions";
+        return normalized.endsWith(path) ? normalized.substring(0, normalized.length() - path.length()) : normalized;
     }
 }

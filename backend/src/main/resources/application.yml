@@ -19,10 +19,11 @@ mybatis-plus:
 
 devflow:
   ai:
-    provider: ${DEVFLOW_AI_PROVIDER:local-rule}
-    base-url: ${DEVFLOW_AI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${DEVFLOW_AI_API_KEY:}
-    model: ${DEVFLOW_AI_MODEL:gpt-4.1-mini}
+    provider: ${DEVFLOW_AI_PROVIDER:${PORTFOLIO_AI_PROVIDER:local-rule}}
+    base-url: ${DEVFLOW_AI_BASE_URL:${PORTFOLIO_AI_BASE_URL:https://api.openai.com/v1}}
+    api-key: ${DEVFLOW_AI_API_KEY:${PORTFOLIO_AI_API_KEY:}}
+    model: ${DEVFLOW_AI_MODEL:${PORTFOLIO_AI_MODEL:gpt-4.1-mini}}
+    protocol: ${DEVFLOW_AI_PROTOCOL:${PORTFOLIO_AI_PROTOCOL:chat-completions-compatible}}
     timeout-seconds: ${DEVFLOW_AI_TIMEOUT_SECONDS:60}
     max-tokens: ${DEVFLOW_AI_MAX_TOKENS:2048}
-    fallback-to-local: ${DEVFLOW_AI_FALLBACK_TO_LOCAL:true}
+    fallback-to-local: ${DEVFLOW_AI_FALLBACK_TO_LOCAL:${PORTFOLIO_AI_FALLBACK_ENABLED:true}}

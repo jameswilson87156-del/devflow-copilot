@@ -10,4 +10,4 @@ spring:
 
 devflow:
   ai:
-    provider: ${DEVFLOW_AI_PROVIDER:local-rule}
+    provider: ${DEVFLOW_AI_PROVIDER:${PORTFOLIO_AI_PROVIDER:local-rule}}

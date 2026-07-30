@@ -7,9 +7,10 @@ public record ProviderResult(
         Integer promptTokens,
         Integer completionTokens,
         Integer totalTokens,
+        boolean fallbackUsed,
         String fallbackReason
 ) {
     public ProviderResult withFallbackReason(String reason) {
-        return new ProviderResult(content, providerName, modelName, promptTokens, completionTokens, totalTokens, reason);
+        return new ProviderResult(content, providerName, modelName, promptTokens, completionTokens, totalTokens, true, reason);
     }
 }

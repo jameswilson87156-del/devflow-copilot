@@ -2,6 +2,7 @@ package com.devflow.copilot.service.impl;
 
 import com.devflow.copilot.common.GenerationStatus;
 import com.devflow.copilot.common.LlmProviderException;
+import com.devflow.copilot.common.ProviderFailureMetadata;
 import com.devflow.copilot.config.AiProviderProperties;
 import com.devflow.copilot.dto.AiGenerateRequest;
 import com.devflow.copilot.dto.AiGenerateResponse;
@@ -98,13 +99,16 @@ public class LocalRuleGenerateService implements AiGenerateService {
             record.setOutputContent(result.content());
             record.setProviderName(result.providerName());
             record.setModelName(result.modelName());
+            record.setFallbackUsed(result.fallbackUsed());
+            record.setFallbackReason(result.fallbackReason());
             record.setPromptTokens(result.promptTokens());
             record.setCompletionTokens(result.completionTokens());
             record.setTotalTokens(result.totalTokens());
             record.setCostTimeMs(System.currentTimeMillis() - start);
             record.setSuccess(true);
-            record.setErrorMessage(result.fallbackReason());
+            record.setErrorMessage(null);
             recordService.save(record);
+            agentWorkflowService.updateExecutionMetadata(run.getId(), result.providerName(), result.modelName(), record.getCostTimeMs());
             List<KnowledgeReferenceResponse> attachedReferences = knowledgeBaseService.attachReferences(record.getId(), references);
             AgentStep generationStep = agentWorkflowService.addStep(run.getId(), 4, "LLM_GENERATION", "Provider 生成", "SUCCESS",
                     "Provider 返回 Artifact，状态进入待人工确认。", record.getCostTimeMs());
@@ -119,17 +123,22 @@ public class LocalRuleGenerateService implements AiGenerateService {
             GenerationRecord completed = recordService.transition(record.getId(), GenerationStatus.READY_FOR_REVIEW);
             return toResponse(completed, run.getId(), attachedReferences);
         } catch (RuntimeException ex) {
-            record.setProviderName(providerProperties.getProvider());
-            record.setModelName(providerProperties.getModel());
+            record.setProviderName(null);
+            record.setModelName(null);
+            record.setFallbackUsed(false);
+            record.setFallbackReason(null);
             record.setCostTimeMs(System.currentTimeMillis() - start);
             record.setSuccess(false);
-            record.setErrorMessage(safeMessage(ex));
+            record.setErrorMessage(safeError(ex));
+            if (ex instanceof LlmProviderException providerException) {
+                applyFailureMetadata(record, providerException);
+            }
             recordService.save(record);
             AgentStep generationStep = agentWorkflowService.addStep(run.getId(), 4, "LLM_GENERATION", "Provider 生成", "FAILED",
-                    "Provider 调用失败：" + safeMessage(ex), record.getCostTimeMs());
+                    "Provider generation failed: " + safeError(ex), record.getCostTimeMs());
             agentWorkflowService.addToolCall(run.getId(), generationStep.getId(), "generation-provider",
-                    providerProperties.getProvider() + " / " + providerProperties.getModel(),
-                    safeMessage(ex), "FAILED", record.getCostTimeMs());
+                    "external-provider-request",
+                    safeError(ex), "FAILED", record.getCostTimeMs());
             traceService.record(record, request, GenerationStatus.FAILED.name());
             recordService.transition(record.getId(), GenerationStatus.FAILED);
             if (ex instanceof LlmProviderException llmProviderException) {
@@ -153,8 +162,10 @@ public class LocalRuleGenerateService implements AiGenerateService {
         record.setStatus(GenerationStatus.GENERATING);
         record.setConfirmed(false);
         record.setSuccess(false);
-        record.setProviderName(providerProperties.getProvider());
-        record.setModelName(providerProperties.getModel());
+        record.setRequestedProvider(requestedProvider());
+        record.setRequestedModel(requestedModel());
+        record.setFallbackUsed(false);
+        record.setFallbackReason(null);
         record.setPromptTemplateId(rendered.templateId());
         record.setPromptTemplateName(rendered.templateName());
         record.setPromptTemplateVersion(rendered.templateVersion());
@@ -179,6 +190,12 @@ public class LocalRuleGenerateService implements AiGenerateService {
                 .status(record.getStatus().name())
                 .providerName(record.getProviderName())
                 .modelName(record.getModelName())
+                .requestedProvider(record.getRequestedProvider())
+                .requestedModel(record.getRequestedModel())
+                .actualProvider(record.getProviderName())
+                .actualModel(record.getModelName())
+                .fallbackUsed(record.getFallbackUsed())
+                .fallbackReason(record.getFallbackReason())
                 .costTimeMs(record.getCostTimeMs())
                 .promptTokens(record.getPromptTokens())
                 .completionTokens(record.getCompletionTokens())
@@ -212,6 +229,15 @@ public class LocalRuleGenerateService implements AiGenerateService {
                 .orElse(request.getInput());
     }
 
+    private String requestedProvider() {
+        String provider = providerProperties.getProvider();
+        return provider == null || provider.isBlank() ? "local-rule" : provider.trim();
+    }
+
+    private String requestedModel() {
+        return "local-rule".equals(requestedProvider()) ? "local-rule-mvp" : providerProperties.getModel();
+    }
+
     private String mergeKnowledgeContext(String existingContext, List<KnowledgeReferenceResponse> references) {
         if (references.isEmpty()) {
             return existingContext;
@@ -238,7 +264,25 @@ public class LocalRuleGenerateService implements AiGenerateService {
                 .orElse("未命中知识引用");
     }
 
-    private String safeMessage(RuntimeException ex) {
-        return ex.getMessage() == null || ex.getMessage().isBlank() ? ex.getClass().getSimpleName() : ex.getMessage();
+    private String safeError(RuntimeException ex) {
+        if (ex instanceof LlmProviderException providerException) {
+            return providerException.getErrorType().safeMessage();
+        }
+        return "UNKNOWN_PROVIDER_ERROR: Provider request failed.";
+    }
+
+    private void applyFailureMetadata(GenerationRecord record, LlmProviderException exception) {
+        ProviderFailureMetadata metadata = exception.getFailureMetadata();
+        record.setProviderErrorType(exception.getErrorType().name());
+        record.setProviderFailureStage(metadata.failureStage().name());
+        record.setProviderHttpStatus(metadata.httpStatusCode());
+        record.setProviderHttpStatusFamily(metadata.httpStatusFamily().value());
+        record.setProviderDurationBucket(metadata.durationBucket().name());
+        record.setProviderResponseBodyPresent(metadata.responseBodyPresent());
+        record.setProviderResponseSizeBucket(metadata.responseBodySizeBucket().name());
+        record.setProviderContentTypeCategory(metadata.contentTypeCategory().name());
+        record.setProviderRetryAfterPresent(metadata.retryAfterHeaderPresent());
+        record.setProviderRequestIdPresent(metadata.upstreamRequestIdHeaderPresent());
+        record.setProviderClientRequestId(metadata.clientRequestId());
     }
 }

@@ -63,8 +63,12 @@ public class LogDiagnosisServiceImpl implements LogDiagnosisService {
         record.setOutputContent(toMarkdown(savedLog));
         record.setStatus(GenerationStatus.READY_FOR_REVIEW);
         record.setConfirmed(false);
+        record.setRequestedProvider("local-rule");
+        record.setRequestedModel("local-rule-mvp");
         record.setProviderName("local-rule");
         record.setModelName("local-rule-mvp");
+        record.setFallbackUsed(false);
+        record.setFallbackReason(null);
         record.setCostTimeMs(80L);
         record.setPromptTokens(estimateTokens(rawLog));
         record.setCompletionTokens(estimateTokens(record.getOutputContent()));

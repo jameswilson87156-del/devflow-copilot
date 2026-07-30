@@ -26,7 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {"devflow.ai.provider=local-rule", "devflow.ai.api-key=", "devflow.ai.protocol=chat-completions-compatible", "devflow.ai.fallback-to-local=true"})
 @ActiveProfiles("test")
 @Transactional
 class AgenticWorkflowIntegrationTest {
@@ -57,11 +57,15 @@ class AgenticWorkflowIntegrationTest {
         List<GenerationTrace> traces = traceService.list(response.getRecordId());
         assertThat(traces).hasSize(1);
         assertThat(traces.get(0).getProviderName()).isEqualTo("local-rule");
+        assertThat(traces.get(0).getProviderName()).isEqualTo(record.getProviderName());
+        assertThat(traces.get(0).getModelName()).isEqualTo(record.getModelName());
         assertThat(traces.get(0).getStatus()).isEqualTo("READY_FOR_REVIEW");
         assertThat(traces.get(0).getInputVariables()).doesNotContain("DEVFLOW_AI_API_KEY");
 
         AgentRunTraceResponse runTrace = agentWorkflowService.getTrace(response.getAgentRunId());
         assertThat(runTrace.getRun().getStatus()).isEqualTo("WAITING_REVIEW");
+        assertThat(runTrace.getRun().getProviderName()).isEqualTo(record.getProviderName());
+        assertThat(runTrace.getRun().getModelName()).isEqualTo(record.getModelName());
         assertThat(runTrace.getSteps()).extracting(AgentStep::getStepType)
                 .contains("TASK_DECOMPOSITION", "PROMPT_RENDER", "KNOWLEDGE_RETRIEVAL", "LLM_GENERATION", "HUMAN_REVIEW");
         assertThat(runTrace.getToolCalls()).extracting("toolName")

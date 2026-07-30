@@ -15,6 +15,12 @@ public class AiGenerateResponse {
     private String status;
     private String providerName;
     private String modelName;
+    private String requestedProvider;
+    private String requestedModel;
+    private String actualProvider;
+    private String actualModel;
+    private Boolean fallbackUsed;
+    private String fallbackReason;
     private Long costTimeMs;
     private Integer promptTokens;
     private Integer completionTokens;

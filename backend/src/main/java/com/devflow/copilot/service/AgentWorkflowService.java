@@ -21,6 +21,8 @@ public interface AgentWorkflowService {
 
     void createPendingReview(Long runId, Long generationRecordId);
 
+    void updateExecutionMetadata(Long runId, String providerName, String modelName, Long latencyMs);
+
     void syncGenerationTransition(Long generationRecordId, GenerationStatus target);
 
     List<AgentRun> list(Long projectId, Long generationRecordId);

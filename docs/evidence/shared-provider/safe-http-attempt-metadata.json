@@ -1,0 +1,20 @@
+{
+  "attemptNumber": 2,
+  "externalRequestAttempted": true,
+  "httpResponseReceived": true,
+  "httpStatusCode": null,
+  "httpStatusFamily": "5XX",
+  "contentTypePresent": false,
+  "contentTypeCategory": "UNKNOWN",
+  "responseBodyPresent": false,
+  "responseBodyLengthBucket": "ZERO_OR_UNKNOWN",
+  "retryAfterHeaderPresent": false,
+  "upstreamRequestIdHeaderPresent": false,
+  "exceptionTypePresent": true,
+  "exceptionTypeCategory": "HTTP_SERVER_ERROR",
+  "failureStage": "HTTP_STATUS_RECEIVED",
+  "failureCategory": "UPSTREAM_SERVER_ERROR",
+  "requestDurationBucket": "UNKNOWN",
+  "fallbackUsed": false,
+  "persistenceCompleted": true
+}
