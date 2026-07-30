@@ -178,14 +178,17 @@ async function main() {
   const migrationFiles = listFiles(rel('backend', 'src', 'main', 'resources', 'db', 'migration'), name => /^V\d+__.*\.sql$/.test(name))
   const migrationText = migrationFiles.map(name => readText(rel('backend', 'src', 'main', 'resources', 'db', 'migration', name))).join('\n')
 
+  const frontendTest = runCommand('npm', ['test'], rel('frontend'), 180000)
   const frontendBuild = runCommand('npm', ['run', 'build'], rel('frontend'), 180000)
-  const backendTest = runCommand('mvn', ['test'], rel('backend'), 240000)
+  const backendVerify = runCommand('mvn', ['-B', 'verify'], rel('backend'), 300000)
   const apiLatency = await measureApiLatency()
   const bundle = summarizeBundle()
   const secretHits = scanSecretPatterns()
 
   const metrics = {
     branch: spawnSync(commandName('git'), ['branch', '--show-current'], { cwd: rootDir, encoding: 'utf8' }).stdout.trim(),
+    commit: spawnSync(commandName('git'), ['rev-parse', '--short', 'HEAD'], { cwd: rootDir, encoding: 'utf8' }).stdout.trim(),
+    worktree: spawnSync(commandName('git'), ['status', '--porcelain'], { cwd: rootDir, encoding: 'utf8' }).stdout.trim() ? '有未提交修改' : 'clean',
     viewFiles: listFiles(rel('frontend', 'src', 'views'), name => name.endsWith('.vue')).length,
     routeComponentCount: countMatches(routerText, /component:\s*[A-Za-z0-9_]+/g),
     redirectRouteCount: countMatches(routerText, /redirect:/g),
@@ -203,8 +206,9 @@ async function main() {
     screenshotCount: listFiles(rel('docs', 'images'), name => name.endsWith('.png')).length,
     readmeImageCount: countMatches(readmeText, /!\[[^\]]*]\((?:\.\/)?docs\/images\/[^)]+\.png\)/g),
     workflowCount: listFiles(rel('.github', 'workflows'), name => name.endsWith('.yml') || name.endsWith('.yaml')).length,
+    frontendTest,
     frontendBuild,
-    backendTest,
+    backendVerify,
     apiLatency,
     bundle,
     secretHits,
@@ -218,6 +222,8 @@ async function main() {
     `采集时间：${now.toISOString()}`,
     `采集命令：\`node scripts/collect-portfolio-metrics.js${runChecks ? ' --run-checks' : ''}\``,
     `当前分支：\`${metrics.branch}\``,
+    `当前提交：\`${metrics.commit}\``,
+    `工作区状态：${metrics.worktree}`,
     '',
     '## 功能规模',
     '',
@@ -238,9 +244,10 @@ async function main() {
     `- 后端测试文件：${metrics.testFileCount} 个`,
     `- 后端测试源码中的 \`@Test\`：${metrics.testCount} 个`,
     `- GitHub Actions workflow：${metrics.workflowCount} 个`,
+    `- \`npm test\`：${metrics.frontendTest.status}${metrics.frontendTest.durationMs === null ? '' : `，耗时 ${metrics.frontendTest.durationMs}ms`}`,
     `- 前端 build 脚本：\`${metrics.npmBuildScript}\``,
     `- \`npm run build\`：${metrics.frontendBuild.status}${metrics.frontendBuild.durationMs === null ? '' : `，耗时 ${metrics.frontendBuild.durationMs}ms`}`,
-    `- \`mvn test\`：${metrics.backendTest.status}${metrics.backendTest.durationMs === null ? '' : `，耗时 ${metrics.backendTest.durationMs}ms`}`,
+    `- \`mvn -B verify\`：${metrics.backendVerify.status}${metrics.backendVerify.durationMs === null ? '' : `，耗时 ${metrics.backendVerify.durationMs}ms`}`,
     '',
     '## 性能体验',
     '',
@@ -256,7 +263,7 @@ async function main() {
     '',
     '- Prompt -> Provider -> Result -> Generation Trace -> Agent Run Trace -> Tool Call -> Human Review 的闭环有实体、表、接口和测试覆盖。',
     '- 当前默认 Provider 是 `local-rule`，不代表真实 LLM 推理。',
-    '- OpenAI-compatible Provider 为代码层适配，真实调用必须通过环境变量配置 Key。',
+    '- OpenAI-compatible Provider 为可选路径；仓库仅有 controlled synthetic 单路径验证证据，不代表生产稳定性或广泛兼容。',
     '- Knowledge Base 当前是关键词 / 简单相似度检索，不是向量数据库。',
     '',
     '## 敏感信息扫描',
@@ -269,7 +276,7 @@ async function main() {
     '',
     `- ${metrics.viewFiles} 个 Vue 页面文件、${metrics.routeComponentCount} 个真实前端页面路由。`,
     `- ${metrics.endpointMappingCount} 个后端 endpoint mapping，覆盖 AI 生成、Trace、Knowledge Base、Prompt、History、Review 等模块。`,
-    `- ${metrics.testCount} 个后端自动化测试源码；若本快照显示 \`mvn test\` 通过，可写最近一次本地测试通过。`,
+    `- ${metrics.testCount} 个后端自动化测试源码；若本快照显示 \`mvn -B verify\` 通过，可写最近一次本地验证通过。`,
     `- ${metrics.screenshotCount} 张本地截图文件，其中 README 引用 ${metrics.readmeImageCount} 张真实页面截图。`,
     '',
     '## 暂时不能写的数据',
@@ -287,8 +294,12 @@ async function main() {
   fs.writeFileSync(path.join(metricsDir, 'metrics_snapshot.md'), `\uFEFF${lines.join('\n')}`, 'utf8')
 
   console.log(`Wrote ${path.relative(rootDir, path.join(metricsDir, 'metrics_snapshot.md'))}`)
+  console.log(`npm test: ${metrics.frontendTest.status}`)
   console.log(`npm run build: ${metrics.frontendBuild.status}`)
-  console.log(`mvn test: ${metrics.backendTest.status}`)
+  console.log(`mvn -B verify: ${metrics.backendVerify.status}`)
+  if (runChecks && [metrics.frontendTest, metrics.frontendBuild, metrics.backendVerify].some(result => result.status !== '通过')) {
+    process.exitCode = 1
+  }
 }
 
 main().catch(error => {

@@ -72,7 +72,7 @@ SAVED → CONFIRMED
 
 ## 测试和 CI
 
-项目包含 20 个后端测试，覆盖模板渲染、必填变量校验、Provider 降级、生成历史、Generation Trace、Agent Run Trace、Human Review、Knowledge Base 切片检索、RAG 引用、合法与非法状态流转、Controller 参数校验、Mapper CRUD 和日志规则诊断。
+项目包含后端自动化测试，覆盖模板渲染、必填变量校验、Provider 降级、生成历史、Generation Trace、Agent Run Trace、Human Review、Knowledge Base 切片检索、RAG 引用、合法与非法状态流转、Controller 参数校验、Mapper CRUD 和日志规则诊断。精确测试数及 `mvn -B verify` 结果以 `docs/metrics/metrics_snapshot.md` 为准。
 
 GitHub Actions 分别执行 `mvn verify` 和 `npm ci && npm run build`。Docker Compose 提供前端、后端和 MySQL 三个服务。
 

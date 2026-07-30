@@ -37,7 +37,7 @@ DevFlow Copilot 是一个 AI Coding Workbench / Agentic Workflow Console，用�
 | Demo Data | H2 Demo, Flyway seed data |
 | AI Workflow | Prompt Template, Provider Router, local-rule fallback, OpenAI-compatible optional provider |
 | Evidence | Generation Trace, Agent Run Trace, Tool Call, Human Review, Knowledge References |
-| Verification | JUnit 5, MockMvc, Playwright screenshot, `npm run build`, `mvn test` |
+| Verification | JUnit 5, MockMvc, Node test + `tsx`, Playwright screenshot, `npm test`, `npm run build`, `mvn -B verify` |
 
 ## Data Boundary
 
@@ -64,9 +64,9 @@ node scripts/collect-portfolio-metrics.js --run-checks
 - 前端真实 component route：8 个，redirect route：1 个，disabled nav item：3 个。
 - 后端 Controller：10 个，endpoint mapping：30 个。
 - Flyway migration：4 个。
-- 后端测试源码中的 `@Test`：20 个。
+- 后端测试源码中的 `@Test` 数量以当前 [metrics snapshot](docs/metrics/metrics_snapshot.md) 为准，不在 README 手工固化旧值。
 - `docs/images` 截图文件：13 张。
-- `npm run build` 和 `mvn test` 的结果以本地最新快照和本轮验证为准。
+- `npm test`、`npm run build` 和 `mvn -B verify` 的结果以本地最新快照和本轮验证为准。
 
 不能从这些指标推导真实线上用户、生产流量、收益、SLA、真实 LLM 质量或 Lighthouse 分数。
 
@@ -115,10 +115,11 @@ canonical 输出：
 
 ```bash
 cd frontend
+npm test
 npm run build
 
 cd ../backend
-mvn test
+mvn -B verify
 
 cd ..
 node scripts/collect-portfolio-metrics.js --run-checks
@@ -129,6 +130,8 @@ npm run screenshots:portfolio
 cd ..
 git diff --check
 ```
+
+Dockerfile / Docker Compose 配置存在，但 `docker compose up --build` 曾因 Docker Hub 镜像网络超时而未完成；当前不能描述为“已容器化部署”。部署指南只记录配置和待验证步骤，不构成运行成功证据。
 
 ## Main APIs
 

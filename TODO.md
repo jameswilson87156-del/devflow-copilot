@@ -27,15 +27,15 @@
 - **轻量 Knowledge Base / RAG 引用**：支持创建文档、自动切片、关键词/简单相似度检索，并在生成响应中返回命中的 chunk 引用；embedding 字段仅为后续扩展预留
 - **日志诊断规则引擎**：识别8种 Java/Spring Boot 常见异常关键词，输出排查步骤和修复 Prompt（规则引擎，不是 LLM 推理）
 - **DTO 校验 + GlobalExceptionHandler**，统一 `ApiResponse` 响应结构
-- **20 个 JUnit 5 / MockMvc / `@SpringBootTest` 集成测试**（`@Transactional` 隔离，`@ActiveProfiles("test")`），最近一次 `mvn test`：`Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`
+- **后端自动化测试**：当前静态统计为 15 个测试文件、42 个 `@Test`；2026-07-30 `mvn -B verify` 实际通过，精确快照见 `docs/metrics/metrics_snapshot.md`
 - **ai_task 最小只读查询入口**：`GET /api/tasks?projectId={projectId}`，复用 `AiTaskMapper`，按 ID 倒序返回指定项目任务列表
 - **Vue 3 + TypeScript + Element Plus** 前端，8 个真实页面路由，Dashboard / Workbench / Trace Evidence / Human Review 已升级为中文 AI Coding Workbench / Agentic Workflow Console 展示页，`npm run build` 通过
 - **截图**：`docs/images/` 下 13 张本地真实浏览器截图均存在；canonical 核心截图为 `dashboard.png`、`workbench.png`、`trace-evidence.png`、`human-review.png`，另保留现有 README 兼容命名和 5 张 1920px 历史大图
 - **Docker Compose** 配置存在，`docker compose config` 通过（三服务：mysql / backend / frontend）
 - **后端宿主端口避让**：已从 `8080` 改为 `${BACKEND_HOST_PORT:-18080}:8080`，避免与现有服务冲突
-- **GitHub Actions CI** 配置存在，包含后端 `mvn -B verify` 和前端 `npm ci && npm run build`
+- **GitHub Actions CI** 配置存在，包含后端 `mvn -B verify` 和前端 `npm ci && npm test && npm run build`
 - **环境审计文档**：`docs/ENVIRONMENT_CHECK.md` 已记录本机工具版本和 Docker Compose 验证记录
-- **Git 仓库**：当前作品集升级分支为 `feat/portfolio-showcase-v1`，协作规则已提交
+- **Git 仓库**：当前分支为 `main`；指标快照记录当前 commit 与工作区状态
 - **README 简历版项目介绍**：已新增“简历版项目介绍”短小节，面向大三 Java 后端实习 / AI 工具开发 / Java + AI 应用投递场景，并保持项目真实边界
 
 ---
@@ -46,7 +46,7 @@
 
 | 不能声称 | 真实情况 |
 |---|---|
-| 接入了真实大模型 | 默认 `local-rule` 生成的是结构化模板 boilerplate，不是 LLM 推理结果；OpenAI-compatible 代码已实现但未用真实 Key 端到端验证 |
+| 稳定接入真实大模型 | 默认 `local-rule` 生成的是结构化模板 boilerplate，不是 LLM 推理结果；OpenAI-compatible 只有 controlled synthetic 单一 Chat Completions 路径验证，不代表生产稳定性、广泛兼容或真实客户数据效果 |
 | 完整多 Agent Runtime | 当前是可解释的单次 Agent Workflow 记录闭环，不做多 Agent 调度、自动工具执行或异步 Worker |
 | 生产级 RAG / 向量数据库 | 当前 Knowledge Base 是关键词/简单相似度检索，`embedding_model`、`embedding_vector` 是扩展预留字段 |
 | AI 智能日志分析 | 日志诊断是关键词规则引擎（8种异常类型硬编码匹配），不是 LLM 推理 |
@@ -125,9 +125,9 @@
 - 表达重点：突出 Java 后端工程化能力，包括 Spring Boot 3、REST API、Controller -> Service -> Mapper 分层、MyBatis-Plus、Flyway、H2/MySQL Profile、统一响应、状态流转和后端测试；也突出 Prompt 模板、生成记录、人工确认、local-rule 演示生成链路与 OpenAI-compatible Provider 代码层适配。
 - 边界保持：没有把项目夸大为生产级大模型平台；继续说明 `local-rule` 不是真实 LLM 推理，日志分析不是 AI 自动推理，tokenUsage 是估算，Docker runtime 未完整成功，`ai_task` 不是完整任务系统，`InMemoryStore` 不是默认主流程持久化。
 
-### P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史
+### P1-3：只读审查 README.md、HANDOFF.md、TODO.md 和最近提交历史 ✅ 已完成
 
-- 状态：**待处理**
+- 状态：**done（2026-07-30）**
 - 背景：P1-1 和 P1-2 已完成后，需要确认文档状态、提交历史和边界表达是否一致。
 - 涉及文件：只读审查 `README.md`、`HANDOFF.md`、`TODO.md` 和最近提交历史，下一轮先不直接修改文件。
 - 审查重点：文档是否一致、是否还有夸大表述、是否适合进入最终验收报告阶段。
@@ -151,9 +151,9 @@
 - 涉及文件：`HANDOFF.md`
 - 验收：每个 Codex 任务完成后"待填写"区有真实记录
 
-### P1-4：补充面试 Q&A 覆盖当前遗留问题
+### P1-4：补充面试 Q&A 覆盖当前遗留问题 ✅ 已完成
 
-- 状态：**待处理**
+- 状态：**done（2026-07-30）**
 - 背景：`docs/interview-guide.md` 已有基础 Q&A，但缺少对 ai_task 空壳、token 估算、Docker 超时的准确答法
 - 涉及文件：`docs/interview-guide.md`
 - 方案：追加以下 Q&A：
@@ -161,6 +161,7 @@
   - Q：token 是怎么算的？
   - Q：Docker 部署跑过吗？
 - 建议 commit message：`docs: add Q&A for ai_task, token estimation, Docker status`
+- 完成内容：`docs/interview-guide.md` 已覆盖 ai_task 范围、tokenUsage 估算、local-rule 边界、Docker 未跑通、Provider synthetic 验证 scope、failure/fallback 区分及不伪造失败 Agent Run。
 
 ### P1-5：Agentic Coding Workflow 控制台最小闭环 ✅ 本轮完成
 

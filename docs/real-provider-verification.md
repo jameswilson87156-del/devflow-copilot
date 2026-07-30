@@ -1,5 +1,8 @@
 # Real Provider Verification
 
+> [!NOTE]
+> **Scope boundary:** the latest repository evidence is the controlled synthetic single Chat Completions path summarized in `docs/shared-provider-audit.md`. It does not establish production availability, SLA, broad model compatibility, real-customer-data behavior, or long-term Provider stability. The default public demo remains `local-rule`.
+
 This document describes how to verify the OpenAI-compatible Provider path without committing secrets. The default demo path remains `local-rule`, so the project can run and be screened without an API key.
 
 ## Environment Variables

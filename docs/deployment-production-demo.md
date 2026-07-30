@@ -1,5 +1,8 @@
 # DevFlow Copilot Production Demo 部署指南
 
+> [!WARNING]
+> **Runtime verification status:** Dockerfile / Docker Compose 配置存在，但 `docker compose up --build` 曾因 Docker Hub 镜像网络超时而未完成。当前没有可复验的容器运行成功证据；本文是部署指南，不是“已容器化部署”的证明。
+
 本文面向作品集演示服务器部署，目标是让 DevFlow Copilot 作为 AI Coding / Agentic Workflow 控制台稳定展示。它不是生产级 SaaS 上线手册，也不承诺登录权限、多租户隔离、复杂多 Agent Runtime、自动代码修改或自动 Git 提交能力。
 
 ## 项目定位
@@ -41,7 +44,7 @@ flowchart LR
 ```bash
 git clone <your-repo-url> devflow-copilot
 cd devflow-copilot
-git checkout feat/frontend-design-system-foundation
+git checkout main
 ```
 
 ### 2. 安装运行时

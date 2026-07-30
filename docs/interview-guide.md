@@ -82,7 +82,7 @@ A：MVP 面向实习项目和个人开发者，重点是提高 AI Coding 的可�
 
 ### Q3：本地规则是不是不够 AI？
 
-A：MVP 先用本地规则验证产品闭环，避免依赖 API Key 和模型额度。架构上已经抽象了 `AiGenerateService` 和 `LlmGenerateService`，后续可以无缝替换成真实 LLM 调用。
+A：`local-rule` 不是 LLM 推理，它的作用是让 Prompt、Generation Record、Trace、Agent Run、Tool Call 和 Human Review 在无 Key 环境下可重复演示。OpenAI-compatible Provider 是可选路径；仓库记录过受控 synthetic Chat Completions 验证，但这不改变默认路径，也不代表生产稳定性或广泛模型兼容。
 
 ### Q4：数据库中最核心的表是什么？
 
@@ -107,3 +107,27 @@ A：不是。当前记录的是一次生成任务的 workflow：任务接收、P
 ### Q9：Knowledge Base 是向量数据库吗？
 
 A：不是。当前是轻量关键词/简单相似度检索，已经实现文档、chunk、检索和引用返回；`embedding_model` 和 `embedding_vector` 字段是后续接 embedding 的预留点。
+
+### Q10：`ai_task` 是完整任务系统吗？
+
+A：不是。当前只有 `GET /api/tasks?projectId={projectId}` 只读查询入口，用来展示已有 seed / demo 任务。没有创建、更新、删除、调度、队列、异步 worker 或自动执行能力，因此不能把 `ai_task` 描述成完整任务平台。
+
+### Q11：`tokenUsage` 是精确 tokenizer 结果吗？
+
+A：默认 `local-rule` 的 token 数由 `estimateTokens()` 按字符长度估算，只用于本地展示，不是模型 tokenizer 的精确统计。可选 Provider 只有在上游响应包含 usage 且解析成功时才可能记录 Provider 返回值；两种来源不能混写。
+
+### Q12：Docker Compose 是否真实跑通？
+
+A：Dockerfile 和 Compose 配置存在，`docker compose config` 曾通过，但 `docker compose up --build` 因 Docker Hub 镜像网络超时未完成，后端和前端容器没有形成可复验的完整运行证据。因此只能说“配置存在、运行验证未完成”，不能说“已容器化部署”。
+
+### Q13：真实 Provider 验证的 scope 是什么？
+
+A：最新证据只覆盖受控 synthetic、单一 Chat Completions 路径和正常 DevFlow Generation API 工作流。它验证了某次请求的响应解析及 Generation Record / Trace / Run / Step 持久化；不覆盖真实客户数据、长期稳定性、SLA、并发、成本、广泛模型兼容或生产部署。默认公开演示仍是 `local-rule`。
+
+### Q14：failure 证据和 fallback 证据怎么解释？
+
+A：两者必须分开。failure 表示外部 Provider 路径未产生可用结果，记录受控错误分类和安全元数据；只有配置允许、分类错误触发并且本地规则实际完成后，`fallbackUsed=true` 才能称为 fallback。失败记录不能被前端补造成成功 Agent Run，fallback 也不能写成真实 LLM 成功。
+
+### Q15：为什么前端 Trace 主要展示成功 / Review 链路？
+
+A：当前公开页面只回放仓库中存在的真实 AgentStep、Tool Call、Generation 和 Human Review 证据。后端有离线 failure / fallback 测试和持久化证据，但没有为作品集准备可公开回放的失败 Agent Run，所以前端不伪造失败案例；缺失状态明确显示未采集或 evidence gap。

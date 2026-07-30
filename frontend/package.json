@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc --noEmit && vite build",
-    "test:trace": "node --test tests/runEvidenceViewModel.test.ts",
+    "test": "npm run test:trace",
+    "test:trace": "tsx --test tests/runEvidenceViewModel.test.ts",
     "preview": "vite preview --host 0.0.0.0",
     "screenshots": "node ../scripts/capture-screenshots.mjs",
     "screenshots:portfolio": "node ../scripts/capture-portfolio-screenshots.mjs",
@@ -30,6 +31,7 @@
     "@types/node": "^22.10.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "playwright": "^1.61.0",
+    "tsx": "^4.23.1",
     "typescript": "~5.6.3",
     "vite": "^6.0.5",
     "vue-tsc": "^2.1.10"

@@ -32,7 +32,7 @@ docs/metrics/metrics_snapshot.md
 
 | 指标名称 | 如何采集 | 命令 | 结果保存 | 是否可写简历 | 推荐表述 | 不能写的情况 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 自动化测试数量 | 扫描 `backend/src/test/java` 中 `@Test` | `node scripts/collect-portfolio-metrics.js` | `docs/metrics/metrics_snapshot.md` | 是 | 后端有 20 个 JUnit/MockMvc/SpringBootTest 测试源码。 | 测试未运行时只能写“测试源码数量”，不能写“测试通过”。 |
+| 自动化测试数量 | 扫描 `backend/src/test/java` 中 `@Test` | `node scripts/collect-portfolio-metrics.js` | `docs/metrics/metrics_snapshot.md` | 是 | 不在计划文档固化数量；以最新快照为准。 | 测试未运行时只能写“测试源码数量”，不能写“测试通过”。 |
 | 后端测试是否通过 | 执行 `cd backend && mvn test` | `node scripts/collect-portfolio-metrics.js --run-checks` | 同上 | 是 | 最近一次 `mvn test` 通过。 | 命令失败或未执行时不能写通过。 |
 | 前端构建是否通过 | 执行 `cd frontend && npm run build` | 同上 | 同上 | 是 | 最近一次 `npm run build` 通过。 | 命令失败或未执行时不能写通过。 |
 | Flyway migration 数量 | 扫描 `backend/src/main/resources/db/migration/V*.sql` | `node scripts/collect-portfolio-metrics.js` | 同上 | 是 | 使用 4 个 Flyway migration 管理 schema 和 demo seed。 | 手动 SQL 未纳入 migration 时不能写。 |

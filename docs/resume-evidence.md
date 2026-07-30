@@ -8,12 +8,12 @@ DevFlow Copilot 是一个面向 AI Coding / VibeCoding 场景的 Agentic Coding 
 - 设计 OpenAI-compatible Provider 抽象，默认使用无 Key 可演示的 `local-rule` Provider，真实 Provider 仅从环境变量读取 API Key，并在失败或未配置时降级到本地规则链路。
 - 落地 Generation Trace 和 Agent Run Trace，记录 Prompt 版本、输入变量、渲染摘要、Provider、模型、延迟、步骤、工具调用和 Human Review 状态，支撑 AI 生成过程可解释。
 - 实现轻量 Knowledge Base/RAG 闭环，支持知识文档创建、文本切片、关键词/简单相似度检索和生成引用返回，并在表结构中预留 `embedding_model`、`embedding_vector` 扩展字段。
-- 补充 20 个 Spring Boot 集成测试覆盖 Prompt 渲染、Provider 降级、状态机、Trace、Agent Workflow、Knowledge 检索和 RAG 引用，前端通过 Vue 3 + TypeScript + Vite 构建验证并生成作品集截图证据。
+- 补充 Spring Boot 集成测试覆盖 Prompt 渲染、Provider 降级、状态机、Trace、Agent Workflow、Knowledge 检索和 RAG 引用；精确测试数及本轮 `npm test` / `mvn -B verify` 结果以 `docs/metrics/metrics_snapshot.md` 为准，避免手工固化旧快照。
 
 ## 不能写或需要谨慎写的 5 条边界
 
 - 不能写“完整多 Agent Runtime”：当前是可解释的单次 workflow 审计记录，不包含多 Agent 调度、规划器、异步 worker 或自动工具执行。
-- 不能写“已稳定接入真实大模型”：默认演示链路是 `local-rule`，OpenAI-compatible 代码路径已准备，真实调用需要用户通过环境变量配置 API Key 后手动验证。
+- 不能写“已稳定接入真实大模型”：默认演示链路是 `local-rule`；OpenAI-compatible 只有受控 synthetic 单路径验证证据，不代表生产稳定性、广泛兼容或真实客户数据效果。
 - 不能写“生产级向量 RAG”：当前 Knowledge Base 是关键词/简单相似度检索，不是向量数据库；embedding 字段只是后续扩展点。
 - 不能写“AI 自动改代码、自动提交 Git”：项目只生成 review-only Artifact，保存和确认必须由人工触发。
 - 不能写“已生产上线或商业化”：当前是本地可运行、可截图、可面试讲解的作品集 MVP，部署方案是可执行计划，不代表已经线上运营。
@@ -58,7 +58,7 @@ DevFlow Copilot 是一个面向 AI Coding / VibeCoding 场景的 Agentic Coding 
 
 ### 10. 下一步你会怎么优化？
 
-我会优先做三件事：用真实 OpenAI-compatible Key 跑一次最小端到端验证；给前端补 1 到 2 个 Vitest 测试；对 Vite 构建的大 chunk 做路由懒加载和依赖拆包优化。这些都能继续增强可信度，而不是堆不必要的大功能。
+当前收口重点不是继续扩平台能力，而是保持 CI 中的前端 Trace 测试、刷新真实 metrics snapshot，并在网络条件允许时单独复验 Docker Compose。Vite 大 chunk 可作为独立性能任务处理；不新增多 Agent、向量数据库或自动改代码。
 
 ## 当前证据材料
 

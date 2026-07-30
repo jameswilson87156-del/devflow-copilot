@@ -1,8 +1,10 @@
 ﻿# DevFlow Copilot 作品集指标快照
 
-采集时间：2026-07-04T08:44:49.731Z
+采集时间：2026-07-30T14:31:08.116Z
 采集命令：`node scripts/collect-portfolio-metrics.js --run-checks`
-当前分支：`feat/portfolio-showcase-v1`
+当前分支：`main`
+当前提交：`3b54c08`
+工作区状态：有未提交修改
 
 ## 功能规模
 
@@ -10,7 +12,7 @@
 - 前端真实 component route：8 个；redirect route：1 个；disabled nav item：3 个
 - 后端 Controller：10 个
 - 后端 endpoint mapping：30 个
-- Flyway migration：4 个
+- Flyway migration：6 个
 - SQL seed insert statement：6 条
 - Prompt 模板 seed：6 条
 - Generation Record seed：6 条
@@ -20,19 +22,20 @@
 
 ## 工程质量
 
-- 后端测试文件：5 个
-- 后端测试源码中的 `@Test`：20 个
+- 后端测试文件：15 个
+- 后端测试源码中的 `@Test`：42 个
 - GitHub Actions workflow：1 个
+- `npm test`：通过，耗时 928ms
 - 前端 build 脚本：`vue-tsc --noEmit && vite build`
-- `npm run build`：通过，耗时 11384ms
-- `mvn test`：通过，耗时 12994ms
+- `npm run build`：通过，耗时 11565ms
+- `mvn -B verify`：通过，耗时 22680ms
 
 ## 性能体验
 
 - Node.js 版本：v24.16.0
 - 前端 bundle 统计：已采集
 - JS assets：19 个，2.2 MB
-- CSS assets：15 个，474 KB
+- CSS assets：13 个，490 KB
 - 关键接口响应：当前未采集 / 默认接口不可用（HTTP 404）
 - 关键接口 URL：`http://127.0.0.1:8080/api/dashboard/stats`
 - 关键接口单次耗时：当前未采集
@@ -41,7 +44,7 @@
 
 - Prompt -> Provider -> Result -> Generation Trace -> Agent Run Trace -> Tool Call -> Human Review 的闭环有实体、表、接口和测试覆盖。
 - 当前默认 Provider 是 `local-rule`，不代表真实 LLM 推理。
-- OpenAI-compatible Provider 为代码层适配，真实调用必须通过环境变量配置 Key。
+- OpenAI-compatible Provider 为可选路径；仓库仅有 controlled synthetic 单路径验证证据，不代表生产稳定性或广泛兼容。
 - Knowledge Base 当前是关键词 / 简单相似度检索，不是向量数据库。
 
 ## 敏感信息扫描
@@ -52,7 +55,7 @@
 
 - 8 个 Vue 页面文件、8 个真实前端页面路由。
 - 30 个后端 endpoint mapping，覆盖 AI 生成、Trace、Knowledge Base、Prompt、History、Review 等模块。
-- 20 个后端自动化测试源码；若本快照显示 `mvn test` 通过，可写最近一次本地测试通过。
+- 42 个后端自动化测试源码；若本快照显示 `mvn -B verify` 通过，可写最近一次本地验证通过。
 - 13 张本地截图文件，其中 README 引用 4 张真实页面截图。
 
 ## 暂时不能写的数据

@@ -2,6 +2,16 @@
 
 使用规则：每轮把新记录追加在“历史记录”顶部，不覆盖旧记录。没有证据时不要写“测试通过”。
 
+## 2026-07-30 - Codex - CI / Metrics / Documentation Closeout
+
+- Frontend CI：保留 `test:trace`，使用 `tsx` 在 Node 20/22/24 环境执行 TypeScript 测试，新增标准 `npm test`；GitHub Actions 前端顺序已改为 `npm ci -> npm test -> npm run build`，测试失败会阻断 job。
+- Metrics：审查并更新 `scripts/collect-portfolio-metrics.js`，`--run-checks` 现在真实执行前端测试、前端 build 与 `mvn -B verify`，记录 branch、commit、worktree、Controller、route、migration、截图和测试统计；任一工程检查失败会返回非零退出码。
+- 最新快照：`docs/metrics/metrics_snapshot.md` 于 2026-07-30 重新采集，branch=`main`、commit=`3b54c08`、worktree=有未提交修改；8 views、8 component routes、10 Controllers、30 endpoint mappings、6 migrations、13 screenshots、15 backend test files、42 `@Test`。
+- 真实检查：快照记录 `npm test`、`npm run build`、`mvn -B verify` 均通过；默认 `http://127.0.0.1:8080/api/dashboard/stats` 返回 HTTP 404，因此 API latency 继续诚实标为“当前未采集”，未补造耗时。
+- 文档：README 移除旧的固定“20 tests”，验证命令加入 `npm test` / `mvn -B verify`；interview guide 补齐 ai_task、tokenUsage、local-rule、Docker、Provider scope、failure/fallback Q&A；deployment guide 醒目标注 Docker Compose runtime 未验证完成；resume evidence、real-provider verification、TODO 同步。
+- Docker 边界：Dockerfile / Compose 配置存在，但 `docker compose up --build` 曾受 Docker Hub 镜像网络超时影响而未完成；不能对外写成“已容器化部署”。
+- Provider 边界：默认 `local-rule`；optional OpenAI-compatible Provider 只有 controlled synthetic 单一 Chat Completions 路径证据，不代表生产稳定性、SLA、广泛模型兼容或真实客户数据效果。前端不伪造失败 Agent Run。
+
 ## 2026-07-04 - Codex - DevFlow 作品集第一版快速收口
 
 - 本轮目标：按用户要求进入作品集第一版收口，不再继续找参考图、不做 Trace Evidence 大改、不做大规模视觉实验；快速达到 GitHub / 简历 / Boss 直聘可展示状态。
