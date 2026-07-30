@@ -1,0 +1,11 @@
+ALTER TABLE generation_record ADD COLUMN provider_error_type VARCHAR(64);
+ALTER TABLE generation_record ADD COLUMN provider_failure_stage VARCHAR(64);
+ALTER TABLE generation_record ADD COLUMN provider_http_status INT;
+ALTER TABLE generation_record ADD COLUMN provider_http_status_family VARCHAR(16);
+ALTER TABLE generation_record ADD COLUMN provider_duration_bucket VARCHAR(32);
+ALTER TABLE generation_record ADD COLUMN provider_response_body_present BOOLEAN;
+ALTER TABLE generation_record ADD COLUMN provider_response_size_bucket VARCHAR(32);
+ALTER TABLE generation_record ADD COLUMN provider_content_type_category VARCHAR(32);
+ALTER TABLE generation_record ADD COLUMN provider_retry_after_present BOOLEAN;
+ALTER TABLE generation_record ADD COLUMN provider_request_id_present BOOLEAN;
+ALTER TABLE generation_record ADD COLUMN provider_client_request_id VARCHAR(36);

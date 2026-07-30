@@ -111,6 +111,19 @@ public class AgentWorkflowServiceImpl implements AgentWorkflowService {
     }
 
     @Override
+    public void updateExecutionMetadata(Long runId, String providerName, String modelName, Long latencyMs) {
+        AgentRun run = runMapper.selectById(runId);
+        if (run == null) {
+            return;
+        }
+        run.setProviderName(providerName);
+        run.setModelName(modelName);
+        run.setLatencyMs(latencyMs);
+        run.setUpdatedAt(LocalDateTime.now());
+        runMapper.updateById(run);
+    }
+
+    @Override
     @Transactional
     public void syncGenerationTransition(Long generationRecordId, GenerationStatus target) {
         AgentRun run = findRun(generationRecordId);

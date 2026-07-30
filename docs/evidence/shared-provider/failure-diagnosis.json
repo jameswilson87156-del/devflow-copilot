@@ -1,0 +1,22 @@
+{
+  "validationResult": "FAILED",
+  "failureStage": "UNKNOWN_STAGE",
+  "failureCategory": "TIMEOUT",
+  "externalRequestAttempted": true,
+  "httpResponseReceived": false,
+  "responseBodyReceived": false,
+  "responseParsingStarted": false,
+  "persistenceCompleted": true,
+  "configurationBindingValid": true,
+  "protocolBindingValid": true,
+  "providerRoutingValid": true,
+  "requestPathValid": true,
+  "codeDefectConfirmed": false,
+  "configurationIssueLikely": false,
+  "providerSideIssueLikely": false,
+  "networkIssueLikely": false,
+  "offlineReproductionCompleted": true,
+  "offlineFixApplied": false,
+  "secondRealCallPerformed": false,
+  "recommendedNextState": "INSUFFICIENT_SANITIZED_EVIDENCE"
+}

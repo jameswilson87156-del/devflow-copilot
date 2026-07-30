@@ -1,0 +1,9 @@
+{
+  "uriValid": true,
+  "dnsResolved": true,
+  "tcpConnected": true,
+  "tlsEstablished": true,
+  "httpRequestSent": false,
+  "authorizationUsed": false,
+  "secretScanPassed": true
+}

@@ -1,6 +1,7 @@
 package com.devflow.copilot.service.provider;
 
 import com.devflow.copilot.common.LlmProviderException;
+import com.devflow.copilot.common.ProviderErrorType;
 import com.devflow.copilot.config.AiProviderProperties;
 import org.springframework.stereotype.Component;
 
@@ -27,15 +28,15 @@ public class GenerationProviderRouter {
             return localRule.generate(request);
         }
         if (!openAiCompatible.key().equals(selected)) {
-            throw new LlmProviderException("不支持的 AI Provider：" + selected);
+            throw new LlmProviderException(ProviderErrorType.UNKNOWN_PROVIDER_ERROR);
         }
         try {
             return openAiCompatible.generate(request);
-        } catch (RuntimeException ex) {
+        } catch (LlmProviderException ex) {
             if (!properties.isFallbackToLocal()) {
                 throw ex;
             }
-            return localRule.generate(request).withFallbackReason(ex.getMessage());
+            return localRule.generate(request).withFallbackReason(ex.getErrorType().name());
         }
     }
 }

@@ -41,8 +41,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
-        log.error("Unhandled request error", ex);
+        if (containsProviderException(ex)) {
+            log.error("Unhandled provider request error type: {}", ex.getClass().getSimpleName());
+        } else {
+            log.error("Unhandled request error", ex);
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail(5000, "服务处理失败，请查看后端日志"));
+    }
+
+    private boolean containsProviderException(Throwable exception) {
+        for (Throwable current = exception; current != null; current = current.getCause()) {
+            if (current instanceof LlmProviderException) {
+                return true;
+            }
+        }
+        return false;
     }
 }

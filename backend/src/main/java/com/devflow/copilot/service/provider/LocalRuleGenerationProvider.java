@@ -24,7 +24,7 @@ public class LocalRuleGenerationProvider implements GenerationProvider {
         int promptTokens = estimateTokens(request.renderedPrompt());
         int completionTokens = estimateTokens(content);
         return new ProviderResult(content, key(), "local-rule-mvp", promptTokens, completionTokens,
-                promptTokens + completionTokens, null);
+                promptTokens + completionTokens, false, null);
     }
 
     private String requirementSplit(ProviderRequest request) {

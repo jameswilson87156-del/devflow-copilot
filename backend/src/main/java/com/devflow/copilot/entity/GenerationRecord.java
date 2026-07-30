@@ -22,8 +22,12 @@ public class GenerationRecord {
     private String outputContent;
     private GenerationStatus status;
     private Boolean confirmed;
+    private String requestedProvider;
+    private String requestedModel;
     private String providerName;
     private String modelName;
+    private Boolean fallbackUsed;
+    private String fallbackReason;
     private Long promptTemplateId;
     private String promptTemplateName;
     private Integer promptTemplateVersion;
@@ -34,6 +38,17 @@ public class GenerationRecord {
     private Long costTimeMs;
     private Boolean success;
     private String errorMessage;
+    private String providerErrorType;
+    private String providerFailureStage;
+    private Integer providerHttpStatus;
+    private String providerHttpStatusFamily;
+    private String providerDurationBucket;
+    private Boolean providerResponseBodyPresent;
+    private String providerResponseSizeBucket;
+    private String providerContentTypeCategory;
+    private Boolean providerRetryAfterPresent;
+    private Boolean providerRequestIdPresent;
+    private String providerClientRequestId;
     @Version
     private Integer version;
     private LocalDateTime createdAt;

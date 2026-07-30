@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(properties = {"devflow.ai.provider=local-rule", "devflow.ai.api-key=", "devflow.ai.protocol=chat-completions-compatible", "devflow.ai.fallback-to-local=true"})
 @ActiveProfiles("test")
 @Transactional
 class PromptTemplateRenderIntegrationTest {
